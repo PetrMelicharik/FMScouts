@@ -1,6 +1,5 @@
 """
-FMScouts Scraper — Apify Proxy verze
-Používá Apify residential proxy přímo v requestech.
+FMScouts Scraper — Apify Proxy verze (opravená autentizace)
 """
 
 import requests
@@ -33,14 +32,13 @@ _req_count = 0
 
 def make_session():
     s = requests.Session()
-    # Apify residential proxy
     if APIFY_TOKEN:
-        password = APIFY_TOKEN
-        proxy_url = f"http://groups-RESIDENTIAL:{password}@proxy.apify.com:8000"
+        # Správný formát Apify proxy URL
+        proxy_url = f"http://auto:{APIFY_TOKEN}@proxy.apify.com:8000"
         s.proxies = {"http": proxy_url, "https": proxy_url}
-        print("✓ Apify residential proxy aktivní")
+        print(f"✓ Apify proxy aktivní (auto skupina)")
     else:
-        print("⚠ Bez proxy (lokální spuštění)")
+        print("⚠ Bez proxy")
     return s
 
 def get_headers():
@@ -70,6 +68,9 @@ def fetch(url, session, retries=0):
     smart_delay()
     try:
         r = session.get(url, headers=get_headers(), timeout=TIMEOUT)
+        if r.status_code == 407:
+            print(f"  🚫 Proxy auth chyba 407 — zkouším bez proxy")
+            r = requests.get(url, headers=get_headers(), timeout=TIMEOUT)
         if r.status_code == 429:
             wait = int(r.headers.get("Retry-After", 60))
             print(f"  ⚠ Rate limit, čekám {wait}s...")
@@ -190,18 +191,16 @@ def main():
     players = load_players(EXCEL_FILE)
     session = make_session()
 
-    # Test první hráč
+    # Test prvního hráče
     print("\n--- Test první hráč ---")
     test = scrape_player(players[0], session)
     if test.get("data") or test.get("stats") or test.get("ratings"):
         print(f"✓ Test OK! Rating: {test.get('avgRating')}, Tým: {test.get('data', {}).get('team')}")
     else:
-        print("✗ Test selhal — proxy pravděpodobně nefunguje pro Sofascore")
-        print("Ukládám prázdná data...")
+        print("✗ Test selhal — proxy nefunguje pro Sofascore")
         save(players, OUTPUT_FILE)
         return
 
-    # Načti existující data
     existing = {}
     if Path(OUTPUT_FILE).exists():
         try:
