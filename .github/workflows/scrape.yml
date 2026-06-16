@@ -1,10 +1,10 @@
-name: Scrape Sofascore
+name: Scrape Sofascore via Apify
 
 on:
   schedule:
-    - cron: '0 3 * * 2'   # Každé úterý ve 3:00 UTC
-    - cron: '0 3 * * 5'   # Každý pátek ve 3:00 UTC
-  workflow_dispatch:        # Možnost spustit ručně z GitHubu
+    - cron: '0 3 * * 2'
+    - cron: '0 3 * * 5'
+  workflow_dispatch:
 
 jobs:
   scrape:
@@ -23,10 +23,10 @@ jobs:
       - name: Install dependencies
         run: pip install requests openpyxl
 
-      - name: Run scraper
-        run: python scraper.py
+      - name: Run Apify scraper
+        run: python scraper_apify.py
         env:
-          SCRAPER_ENV: github_actions
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
 
       - name: Commit updated data
         run: |
