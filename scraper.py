@@ -22,7 +22,6 @@ OUTPUT   = "data/players.json"
 LEAGUES = [
     # Česko
     {"id": 345, "name": "Česko (1. liga)",        "country": "Czech",       "tier": 1, "season_type": "fall_spring"},
-    {"id": 346, "name": "Česko (2. liga)",        "country": "Czech",       "tier": 2, "season_type": "fall_spring"},
     # Dánsko — podzim-jaro (od 2024/25)
     {"id": 119, "name": "Dánsko (1. liga)",       "country": "Denmark",     "tier": 1, "season_type": "fall_spring"},
     {"id": 120, "name": "Dánsko (2. liga)",       "country": "Denmark",     "tier": 2, "season_type": "fall_spring"},
@@ -39,13 +38,11 @@ LEAGUES = [
     {"id": 106, "name": "Polsko (1. liga)",       "country": "Poland",      "tier": 1, "season_type": "fall_spring"},
     # Rakousko
     {"id": 218, "name": "Rakousko (1. liga)",     "country": "Austria",     "tier": 1, "season_type": "fall_spring"},
-    {"id": 219, "name": "Rakousko (2. liga)",     "country": "Austria",     "tier": 2, "season_type": "fall_spring"},
     # Rumunsko
     {"id": 283, "name": "Rumunsko (1. liga)",     "country": "Romania",     "tier": 1, "season_type": "fall_spring"},
     # Slovensko
     {"id": 332, "name": "Slovensko (1. liga)",    "country": "Slovakia",    "tier": 1, "season_type": "fall_spring"},
     # Slovinsko
-    {"id": 373, "name": "Slovinsko (1. liga)",    "country": "Slovenia",    "tier": 1, "season_type": "fall_spring"},
     # Srbsko
     {"id": 286, "name": "Srbsko (1. liga)",       "country": "Serbia",      "tier": 1, "season_type": "fall_spring"},
     # Švédsko — jaro-podzim
@@ -53,7 +50,6 @@ LEAGUES = [
     {"id": 114, "name": "Švédsko (2. liga)",      "country": "Sweden",      "tier": 2, "season_type": "spring_fall"},
     # Švýcarsko
     {"id": 207, "name": "Švýcarsko (1. liga)",    "country": "Switzerland", "tier": 1, "season_type": "fall_spring"},
-    {"id": 208, "name": "Švýcarsko (2. liga)",    "country": "Switzerland", "tier": 2, "season_type": "fall_spring"},
     # Ukrajina
     {"id": 333, "name": "Ukrajina (1. liga)",     "country": "Ukraine",     "tier": 1, "season_type": "fall_spring"},
 ]
