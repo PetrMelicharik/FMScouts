@@ -299,7 +299,21 @@ function rc(r){
   return r>=7.5?'#16a34a':r>=6.5?'#2563eb':r>=5.5?'#d97706':'#dc2626';
 }
 function photoHtml(url,col,name,size){
-  const fb=`<div style="width:${size}px;height:${size}px;border-radius:50%;background:${col}18;color:${col};display:flex;align-items:center;justify-content:center;font-size:${size*0.27}px;font-weight:700;border:2px solid ${col}30">${ini(name)}</div>`;
+  const s=size+'px';
+  const initials=ini(name);
+  const wrapper=document.createElement('div');
+  wrapper.style.cssText='width:'+s+';height:'+s+';border-radius:50%;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:'+col+'18;color:'+col+';font-size:'+Math.round(size*0.27)+'px;font-weight:700;border:2px solid '+col+'30';
+  if(url){
+    const img=document.createElement('img');
+    img.src=url;
+    img.style.cssText='width:'+s+';height:'+s+';object-fit:cover;border-radius:50%';
+    img.onerror=function(){this.style.display='none';wrapper.textContent=initials;};
+    wrapper.appendChild(img);
+  } else {
+    wrapper.textContent=initials;
+  }
+  return wrapper.outerHTML;
+}px;height:${size}px;border-radius:50%;background:${col}18;color:${col};display:flex;align-items:center;justify-content:center;font-size:${size*0.27}px;font-weight:700;border:2px solid ${col}30">${ini(name)}</div>`;
   if(!url)return fb;
   return`<img src="${url}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:2px solid #dde6dd" onerror="this.outerHTML='${fb.replace(/'/g,"\\'")}';" alt="">`;
 }
@@ -448,7 +462,7 @@ function renderTow(){
   el.innerHTML=sorted.map((p,i)=>{
     const col=PC[p.position]||'#3ab54a';
     const rc_=i===0?'g':i===1?'s':i===2?'b':'';
-    return`<div class="tow-row" onclick="openPlayer(${p.id},'${p.teamId}')">
+    return`<div class="tow-row" onclick="openPlayer(${p.id},${JSON.stringify(p.teamId)})">
       <div class="tow-rank ${rc_}">${i+1}</div>
       ${photoHtml(p.photo,col,p.name,34)}
       <div class="tow-info">
@@ -479,7 +493,7 @@ function renderCompare(){
   el.innerHTML=`<div class="cmp-grid">${[a,b].map(p=>{
     const col=PC[p.position]||'#3ab54a';
     return`<div class="cmp-card">
-      <div style="display:flex;justify-content:center;margin-bottom:10px">${photoHtml(p.photo,col,p.name,56)}</div>
+      <div style="display:flex;justify-content:center;margin-bottom:10px"><div style="width:56px;height:56px;border-radius:50%;background:${col}18;color:${col};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;border:2px solid ${col}30;overflow:hidden">${p.photo?'<img src="'+p.photo+'" style="width:56px;height:56px;object-fit:cover" onerror="this.style.display=\'none\'" alt="">':''}${ini(p.name)}</div></div>
       <div style="font-size:15px;font-weight:800">${p.name}</div>
       <div style="margin-top:4px"><span class="badge bp">${PCS[p.position]||'—'}</span></div>
       <div style="font-size:12px;color:var(--muted);margin-top:6px">${p.teamName}</div>
