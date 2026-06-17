@@ -20,11 +20,6 @@ OUTPUT   = "data/players.json"
 # "fall_spring" = podzim-jaro (2025): zbytek (Česko, Slovensko, Polsko, Bosna atd.)
 
 LEAGUES = [
-    # Bosna
-    {"id": 316, "name": "Bosna (1. liga)",        "country": "Bosnia",      "tier": 1, "season_type": "fall_spring"},
-    # Bulharsko
-    {"id": 175, "name": "Bulharsko (1. liga)",    "country": "Bulgaria",    "tier": 1, "season_type": "fall_spring"},
-    {"id": 176, "name": "Bulharsko (2. liga)",    "country": "Bulgaria",    "tier": 2, "season_type": "fall_spring"},
     # Česko
     {"id": 345, "name": "Česko (1. liga)",        "country": "Czech",       "tier": 1, "season_type": "fall_spring"},
     {"id": 346, "name": "Česko (2. liga)",        "country": "Czech",       "tier": 2, "season_type": "fall_spring"},
@@ -32,35 +27,27 @@ LEAGUES = [
     {"id": 119, "name": "Dánsko (1. liga)",       "country": "Denmark",     "tier": 1, "season_type": "fall_spring"},
     {"id": 120, "name": "Dánsko (2. liga)",       "country": "Denmark",     "tier": 2, "season_type": "fall_spring"},
     # Estonsko — jaro-podzim
-    {"id": 329, "name": "Estonsko (1. liga)",     "country": "Estonia",     "tier": 1, "season_type": "spring_fall"},
     # Finsko — jaro-podzim
     {"id": 244, "name": "Finsko (1. liga)",       "country": "Finland",     "tier": 1, "season_type": "spring_fall"},
     # Chorvatsko
     {"id": 210, "name": "Chorvatsko (1. liga)",   "country": "Croatia",     "tier": 1, "season_type": "fall_spring"},
-    {"id": 211, "name": "Chorvatsko (2. liga)",   "country": "Croatia",     "tier": 2, "season_type": "fall_spring"},
-    # Lotyšsko — jaro-podzim
-    {"id": 365, "name": "Lotyšsko (1. liga)",     "country": "Latvia",      "tier": 1, "season_type": "spring_fall"},
     # Maďarsko
     {"id": 271, "name": "Maďarsko (1. liga)",     "country": "Hungary",     "tier": 1, "season_type": "fall_spring"},
     # Norsko — jaro-podzim
     {"id": 103, "name": "Norsko (1. liga)",       "country": "Norway",      "tier": 1, "season_type": "spring_fall"},
-    {"id": 104, "name": "Norsko (2. liga)",       "country": "Norway",      "tier": 2, "season_type": "spring_fall"},
     # Polsko
     {"id": 106, "name": "Polsko (1. liga)",       "country": "Poland",      "tier": 1, "season_type": "fall_spring"},
-    {"id": 107, "name": "Polsko (2. liga)",       "country": "Poland",      "tier": 2, "season_type": "fall_spring"},
     # Rakousko
     {"id": 218, "name": "Rakousko (1. liga)",     "country": "Austria",     "tier": 1, "season_type": "fall_spring"},
     {"id": 219, "name": "Rakousko (2. liga)",     "country": "Austria",     "tier": 2, "season_type": "fall_spring"},
     # Rumunsko
     {"id": 283, "name": "Rumunsko (1. liga)",     "country": "Romania",     "tier": 1, "season_type": "fall_spring"},
-    {"id": 284, "name": "Rumunsko (2. liga)",     "country": "Romania",     "tier": 2, "season_type": "fall_spring"},
     # Slovensko
     {"id": 332, "name": "Slovensko (1. liga)",    "country": "Slovakia",    "tier": 1, "season_type": "fall_spring"},
     # Slovinsko
     {"id": 373, "name": "Slovinsko (1. liga)",    "country": "Slovenia",    "tier": 1, "season_type": "fall_spring"},
     # Srbsko
     {"id": 286, "name": "Srbsko (1. liga)",       "country": "Serbia",      "tier": 1, "season_type": "fall_spring"},
-    {"id": 287, "name": "Srbsko (2. liga)",       "country": "Serbia",      "tier": 2, "season_type": "fall_spring"},
     # Švédsko — jaro-podzim
     {"id": 113, "name": "Švédsko (1. liga)",      "country": "Sweden",      "tier": 1, "season_type": "spring_fall"},
     {"id": 114, "name": "Švédsko (2. liga)",      "country": "Sweden",      "tier": 2, "season_type": "spring_fall"},
@@ -69,7 +56,6 @@ LEAGUES = [
     {"id": 208, "name": "Švýcarsko (2. liga)",    "country": "Switzerland", "tier": 2, "season_type": "fall_spring"},
     # Ukrajina
     {"id": 333, "name": "Ukrajina (1. liga)",     "country": "Ukraine",     "tier": 1, "season_type": "fall_spring"},
-    {"id": 334, "name": "Ukrajina (2. liga)",     "country": "Ukraine",     "tier": 2, "season_type": "fall_spring"},
 ]
 
 def current_season(season_type):

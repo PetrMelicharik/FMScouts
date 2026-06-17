@@ -306,6 +306,7 @@ function renderPlayers(){
         <div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">${p.age||'—'}</div></div>
         <div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">${p.height?p.height+' cm':'—'}</div></div>
         <div class="ci" style="grid-column:1/-1"><div class="ci-lbl">Národnost</div><div class="ci-val"><span class="flag">${f}</span>${p.nationality||'—'}</div></div>
+        ${p.appearances!=null?'<div class="ci"><div class="ci-lbl">Góly / Ass</div><div class="ci-val" style="color:#16a34a">'+( p.goals||0)+' / '+(p.assists||0)+'</div></div><div class="ci"><div class="ci-lbl">Rating</div><div class="ci-val" style="font-weight:700">'+( p.rating?parseFloat(p.rating).toFixed(2):'—')+'</div></div>':''}
       </div>
       <div class="card-league"><span class="ldot"></span>${leagueLabel(p)}</div>
     </div>`;
@@ -348,7 +349,23 @@ function openPlayer(id,teamId){
       <div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival">${p.teamName||'—'}</div></div>
       <div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival">${leagueLabel(p)} · ${p.season||'—'}</div></div>
     </div>
-    <div class="no-stats">📊 Statistiky (góly, asistence, minuty, rating, radar grafy) budou dostupné po přechodu na placený plán API-Football ($19/měsíc).</div>`;
+    ${p.appearances!=null?`<div style="background:var(--s2);border-radius:var(--r-sm);padding:12px;border:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Sezónní statistiky</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700;color:var(--green)">${p.goals||0}</div><div style="font-size:10px;color:var(--muted)">Góly</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700">${p.assists||0}</div><div style="font-size:10px;color:var(--muted)">Asistence</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700;color:${parseFloat(p.rating)>=7.5?'#16a34a':parseFloat(p.rating)>=6.5?'#2563eb':parseFloat(p.rating)>=5.5?'#d97706':'#dc2626'}">${p.rating?parseFloat(p.rating).toFixed(2):'—'}</div><div style="font-size:10px;color:var(--muted)">Rating</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700">${p.appearances||0}</div><div style="font-size:10px;color:var(--muted)">Zápasy</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700">${p.minutesPlayed||0}</div><div style="font-size:10px;color:var(--muted)">Minuty</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700">${p.shots||0}</div><div style="font-size:10px;color:var(--muted)">Střely</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700">${p.passes||0}</div><div style="font-size:10px;color:var(--muted)">Přihrávky</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700">${p.keyPasses||0}</div><div style="font-size:10px;color:var(--muted)">Klíč. přihr.</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700">${p.dribbles||0}</div><div style="font-size:10px;color:var(--muted)">Driblinky</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700">${p.tackles||0}</div><div style="font-size:10px;color:var(--muted)">Souboje</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700">${p.interceptions||0}</div><div style="font-size:10px;color:var(--muted)">Odpojení</div></div>
+        <div style="text-align:center;background:var(--s1);border-radius:var(--r-sm);padding:8px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:700;color:#d97706">${p.yellowCards||0}</div><div style="font-size:10px;color:var(--muted)">ŽK</div></div>
+      </div>
+    </div>`:'<div class="no-stats">📊 Statistiky pro tohoto hráče nejsou dostupné.</div>'}`;
 
   document.getElementById('overlay').style.display='flex';
 }
