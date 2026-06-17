@@ -29,7 +29,8 @@ jobs:
       - name: Run Apify scraper
         run: python scraper_apify.py
         env:
-          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          WEBSHARE_USER: ${{ secrets.WEBSHARE_USER }}
+          WEBSHARE_PASS: ${{ secrets.WEBSHARE_PASS }}
 
       - name: Commit updated data
         run: |
