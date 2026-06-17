@@ -1,1 +1,25 @@
-{"players":[],"meta":{"lastUpdated":null,"season":2025,"totalPlayers":0,"leagues":[]}}
+{
+  "players": [],
+  "meta": {
+    "lastUpdated": "2026-06-17T08:00:57.790953",
+    "season": 2025,
+    "totalPlayers": 0,
+    "leagues": [
+      {
+        "id": 345,
+        "name": "Česko (1. liga)",
+        "country": "Czech",
+        "tier": 1,
+        "players": 0
+      },
+      {
+        "id": 103,
+        "name": "Norsko (1. liga)",
+        "country": "Norway",
+        "tier": 1,
+        "players": 0
+      }
+    ],
+    "testMode": true
+  }
+}
