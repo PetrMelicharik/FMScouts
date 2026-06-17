@@ -16,6 +16,18 @@ on:
           - all
           - players
           - matches
+      days_back:
+        description: 'Kolik dní zpět (0 = celá sezóna, výchozí 14)'
+        required: false
+        default: '14'
+      leagues_mode:
+        description: 'Které ligy (all = všechny, spring_fall = jen jaro-podzim)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - spring_fall
 
 permissions:
   contents: write
@@ -49,6 +61,7 @@ jobs:
           git config user.name "FMScouts Bot"
           git config user.email "bot@fmscouts.com"
           git add data/players.json
+          git add data/players.json
           git diff --staged --quiet || git commit -m "Players update $(date +'%Y-%m-%d %H:%M')"
           git push
 
@@ -59,3 +72,5 @@ jobs:
           APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          DAYS_BACK: ${{ github.event.inputs.days_back || '14' }}
+          LEAGUES_MODE: ${{ github.event.inputs.leagues_mode || 'all' }}
