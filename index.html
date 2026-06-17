@@ -212,6 +212,18 @@ const LEAGUE_NAMES={
   333:'Premier League',334:'Persha liha',
 };
 function leagueName(p){return LEAGUE_NAMES[p.leagueId]||p.leagueName||'';}
+const COUNTRY_NAMES={
+  'Bosnia':'Bosna','Bulgaria':'Bulharsko','Czech':'Česko','Denmark':'Dánsko',
+  'Estonia':'Estonsko','Finland':'Finsko','Croatia':'Chorvatsko','Kosovo':'Kosovo',
+  'Latvia':'Lotyšsko','Hungary':'Maďarsko','Norway':'Norsko','Poland':'Polsko',
+  'Austria':'Rakousko','Romania':'Rumunsko','Slovakia':'Slovensko','Slovenia':'Slovinsko',
+  'Serbia':'Srbsko','Sweden':'Švédsko','Switzerland':'Švýcarsko','Ukraine':'Ukrajina',
+};
+function leagueLabel(p){
+  const name=LEAGUE_NAMES[p.leagueId]||p.leagueName||'';
+  const country=COUNTRY_NAMES[p.country]||p.country||'';
+  return country?name+' ('+country+')':name;
+}
 
 function flag(nat){
   const code=FLAGS[nat];
@@ -295,7 +307,7 @@ function renderPlayers(){
         <div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">${p.height?p.height+' cm':'—'}</div></div>
         <div class="ci" style="grid-column:1/-1"><div class="ci-lbl">Národnost</div><div class="ci-val"><span class="flag">${f}</span>${p.nationality||'—'}</div></div>
       </div>
-      <div class="card-league"><span class="ldot"></span>${leagueName(p)}</div>
+      <div class="card-league"><span class="ldot"></span>${leagueLabel(p)}</div>
     </div>`;
   }).join('');
 
@@ -316,7 +328,7 @@ function openPlayer(id,teamId){
       <div style="display:flex;align-items:center">${ph}</div>
       <div>
         <div class="mname">${p.name}</div>
-        <div class="msub">${p.teamName||'—'} · ${leagueName(p)}</div>
+        <div class="msub">${p.teamName||'—'} · ${leagueLabel(p)}</div>
       </div>
       <button class="mclose" onclick="closeModal()">×</button>
     </div>`;
@@ -334,7 +346,7 @@ function openPlayer(id,teamId){
       <div class="icell"><div class="ilbl">Národnost</div><div class="ival"><span style="font-size:18px">${f}</span>${p.nationality||'—'}</div></div>
       <div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">${p.height?p.height+' cm':'—'}${p.weight?' / '+p.weight+' kg':''}</div></div>
       <div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival">${p.teamName||'—'}</div></div>
-      <div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival">${leagueName(p)} · ${p.season||'—'}</div></div>
+      <div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival">${leagueLabel(p)} · ${p.season||'—'}</div></div>
     </div>
     <div class="no-stats">📊 Statistiky (góly, asistence, minuty, rating, radar grafy) budou dostupné po přechodu na placený plán API-Football ($19/měsíc).</div>`;
 
@@ -366,7 +378,7 @@ function renderCompare(){
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">${p.name}</div>
       <span class="badge bp">${PCS[p.position]||'—'}</span>
       <div style="font-size:12px;color:var(--muted);margin-top:6px">${p.teamName}</div>
-      <div style="font-size:11px;color:var(--muted2);margin-top:2px">${leagueName(p)}</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:2px">${leagueLabel(p)}</div>
       <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px">
         <div class="row"><span style="font-size:11px;color:var(--muted);font-weight:500">Věk</span><span style="font-size:13px;font-weight:700">${p.age||'—'}</span></div>
         <div class="row"><span style="font-size:11px;color:var(--muted);font-weight:500">Výška</span><span style="font-size:13px;font-weight:700">${p.height?p.height+' cm':'—'}</span></div>
