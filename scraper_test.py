@@ -14,7 +14,7 @@ from pathlib import Path
 API_KEY  = os.environ.get("APIFOOTBALL_KEY")
 BASE_URL = "https://v3.football.api-sports.io"
 OUTPUT   = "data/players.json"
-SEASON   = 2025
+SEASON   = 2024
 
 # Jen 2 ligy pro test
 LEAGUES = [
