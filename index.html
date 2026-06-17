@@ -219,28 +219,55 @@ function loadPlayerForm(playerId, container) {
     'select': 'rating,goals,assists,minutes,match_id,matches!inner(match_date,home_team,away_team,round)',
     'player_id': 'eq.'+playerId,
     'order': 'match_id.desc',
-    'limit': '8'
+    'limit': '6'
   }).then(function(data) {
     if(!data || !data.length) {
       container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Žádné zápasové záznamy.</div>';
       return;
     }
-    var maxR = Math.max.apply(null, data.map(function(d){return parseFloat(d.rating)||0;}));
-    var html = '<div class="sbox" style="margin-top:0">'
-      + '<div class="sbox-title">Forma — posledních '+data.length+' zápasů</div>'
-      + '<div style="display:flex;gap:4px;align-items:flex-end;height:60px;margin-bottom:8px">';
-    data.slice().reverse().forEach(function(d) {
-      var r = parseFloat(d.rating)||0;
-      var h = Math.max(4, (r/maxR)*100);
-      var col = r>=7.5?'#16a34a':r>=6.5?'#2563eb':r>=5.5?'#d97706':'#dc2626';
-      var match = d.matches;
-      var label = match ? match.home_team.split(' ').pop()+' v '+match.away_team.split(' ').pop() : '';
-      html += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center" title="'+r.toFixed(2)+' — '+label+'">'
-        + '<div style="width:100%;border-radius:3px 3px 0 0;background:'+col+';height:'+h+'%"></div>'
-        + '<div style="font-size:9px;color:var(--muted);margin-top:3px">'+r.toFixed(1)+'</div>'
-        + '</div>';
+    var sorted = data.slice().reverse();
+    var ratings = sorted.map(function(d){return parseFloat(d.rating)||0;});
+    var minR = Math.min.apply(null, ratings);
+    var maxR = Math.max.apply(null, ratings);
+    var range = Math.max(maxR - minR, 1);
+
+    // SVG spojnicový graf
+    var W = 440, H = 90, PAD = 12;
+    var pts = ratings.map(function(r, i) {
+      var x = PAD + (i / Math.max(ratings.length-1, 1)) * (W - PAD*2);
+      var y = PAD + (1 - (r - minR) / range) * (H - PAD*2);
+      return [x, y, r];
     });
-    html += '</div>';
+
+    // Gradient area pod čarou
+    var areaPath = 'M '+pts[0][0]+' '+H;
+    pts.forEach(function(p){areaPath += ' L '+p[0]+' '+p[1];});
+    areaPath += ' L '+pts[pts.length-1][0]+' '+H+' Z';
+
+    // Čára
+    var linePath = pts.map(function(p,i){return (i===0?'M':'L')+' '+p[0]+' '+p[1];}).join(' ');
+
+    var svg = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:90px;display:block;margin-bottom:10px">'
+      + '<defs><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0%" stop-color="#3ab54a" stop-opacity="0.25"/>'
+      + '<stop offset="100%" stop-color="#3ab54a" stop-opacity="0"/>'
+      + '</linearGradient></defs>'
+      + '<path d="'+areaPath+'" fill="url(#fg)"/>'
+      + '<path d="'+linePath+'" fill="none" stroke="#3ab54a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+
+    // Body + labely
+    pts.forEach(function(p) {
+      var col = p[2]>=7.5?'#16a34a':p[2]>=6.5?'#2563eb':p[2]>=5.5?'#d97706':'#dc2626';
+      svg += '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="4" fill="'+col+'" stroke="#fff" stroke-width="1.5"/>';
+      // Rating label nad bodem
+      var labelY = p[1] > PAD+10 ? p[1]-7 : p[1]+14;
+      svg += '<text x="'+p[0]+'" y="'+labelY+'" text-anchor="middle" font-size="8" fill="'+col+'" font-weight="700">'+p[2].toFixed(1)+'</text>';
+    });
+    svg += '</svg>';
+
+    var html = '<div class="sbox" style="margin-top:0">'
+      + '<div class="sbox-title">Forma — posledních '+sorted.length+' zápasů</div>'
+      + svg;
     // Tabulka zápasů
     html += '<div style="display:flex;flex-direction:column;gap:4px">';
     data.forEach(function(d) {
