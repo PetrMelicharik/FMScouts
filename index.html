@@ -124,7 +124,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </button>
   <button class="nav-btn" id="nv-tow" onclick="setView('tow')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    Tým týdne
+    Top hráči
   </button>
   <button class="nav-btn" id="nv-compare" onclick="setView('compare')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
@@ -165,8 +165,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 
   <div class="view" id="view-tow">
-    <div class="page-title">Tým týdne</div>
-    <div class="page-sub">Top 25 hráčů dle sezónního ratingu (min. 5 zápasů)</div>
+    <div class="page-title">Top hráči</div>
+    <div class="page-sub">Top 25 hráčů dle průměrného sezónního ratingu</div>
     <div id="tow-list"></div>
   </div>
 
@@ -198,6 +198,71 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <script>
 var players=[], cmpList=[], current=null;
+
+// Supabase
+var SUPABASE_URL = 'https://quhqfxhypuailolpvetx.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_n5hdolcBiiqAp1g4rBRmsA_nR-PGIxW';
+
+function sbGet(table, params) {
+  var query = Object.entries(params).map(function(e){return e[0]+'='+e[1];}).join('&');
+  return fetch(SUPABASE_URL+'/rest/v1/'+table+'?'+query, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer '+SUPABASE_KEY
+    }
+  }).then(function(r){return r.json();});
+}
+
+function loadPlayerForm(playerId, container) {
+  container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Načítám formu...</div>';
+  sbGet('player_match_stats', {
+    'select': 'rating,goals,assists,minutes,match_id,matches!inner(match_date,home_team,away_team,round)',
+    'player_id': 'eq.'+playerId,
+    'order': 'match_id.desc',
+    'limit': '8'
+  }).then(function(data) {
+    if(!data || !data.length) {
+      container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Žádné zápasové záznamy.</div>';
+      return;
+    }
+    var maxR = Math.max.apply(null, data.map(function(d){return parseFloat(d.rating)||0;}));
+    var html = '<div class="sbox" style="margin-top:0">'
+      + '<div class="sbox-title">Forma — posledních '+data.length+' zápasů</div>'
+      + '<div style="display:flex;gap:4px;align-items:flex-end;height:60px;margin-bottom:8px">';
+    data.slice().reverse().forEach(function(d) {
+      var r = parseFloat(d.rating)||0;
+      var h = Math.max(4, (r/maxR)*100);
+      var col = r>=7.5?'#16a34a':r>=6.5?'#2563eb':r>=5.5?'#d97706':'#dc2626';
+      var match = d.matches;
+      var label = match ? match.home_team.split(' ').pop()+' v '+match.away_team.split(' ').pop() : '';
+      html += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center" title="'+r.toFixed(2)+' — '+label+'">'
+        + '<div style="width:100%;border-radius:3px 3px 0 0;background:'+col+';height:'+h+'%"></div>'
+        + '<div style="font-size:9px;color:var(--muted);margin-top:3px">'+r.toFixed(1)+'</div>'
+        + '</div>';
+    });
+    html += '</div>';
+    // Tabulka zápasů
+    html += '<div style="display:flex;flex-direction:column;gap:4px">';
+    data.forEach(function(d) {
+      var r = parseFloat(d.rating)||0;
+      var col = r>=7.5?'#16a34a':r>=6.5?'#2563eb':r>=5.5?'#d97706':'#dc2626';
+      var match = d.matches;
+      var matchStr = match ? match.home_team+' vs '+match.away_team : '—';
+      var dateStr = match && match.match_date ? new Date(match.match_date).toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric'}) : '';
+      html += '<div style="display:flex;align-items:center;gap:8px;background:var(--s1);border-radius:var(--r-sm);padding:6px 10px;border:1px solid var(--border)">'
+        + '<div style="font-size:18px;font-weight:800;color:'+col+';min-width:36px">'+r.toFixed(2)+'</div>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+matchStr+'</div>'
+        + '<div style="font-size:10px;color:var(--muted)">'+dateStr+(d.goals?' · ⚽ '+d.goals:'')+(d.assists?' · 🅰 '+d.assists:'')+(d.minutes?' · '+d.minutes+'''  :'')+'</div>'
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div></div>';
+    container.innerHTML = html;
+  }).catch(function(e) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px">Chyba načítání formy.</div>';
+  });
+}
 
 var PC={Goalkeeper:'#d97706',Defender:'#2563eb',Midfielder:'#7c3aed',Attacker:'#dc2626'};
 var PCS={Goalkeeper:'GK',Defender:'DEF',Midfielder:'MID',Attacker:'FWD'};
@@ -426,6 +491,12 @@ function openPlayer(id,teamId){
 
   document.getElementById('m-body').innerHTML=body;
   document.getElementById('overlay').style.display='flex';
+
+  // Načti formu z Supabase
+  var formContainer = document.createElement('div');
+  formContainer.id = 'm-form';
+  document.getElementById('m-body').appendChild(formContainer);
+  loadPlayerForm(p.id, formContainer);
 }
 
 function closeModal(){document.getElementById('overlay').style.display='none';}
