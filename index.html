@@ -166,29 +166,33 @@ const PCS={Goalkeeper:'GK',Defender:'DEF',Midfielder:'MID',Attacker:'FWD'};
 const PCZK={Goalkeeper:'Brankář',Defender:'Obránce',Midfielder:'Záložník',Attacker:'Útočník'};
 
 const FLAGS={
-  'Afghanistan':'🇦🇫','Albania':'🇦🇱','Algeria':'🇩🇿','Angola':'🇦🇴','Argentina':'🇦🇷',
-  'Armenia':'🇦🇲','Australia':'🇦🇺','Austria':'🇦🇹','Azerbaijan':'🇦🇿','Belarus':'🇧🇾',
-  'Belgium':'🇧🇪','Benin':'🇧🇯','Bosnia':'🇧🇦','Bosnia and Herzegovina':'🇧🇦','Brazil':'🇧🇷',
-  'Bulgaria':'🇧🇬','Burkina Faso':'🇧🇫','Cameroon':'🇨🇲','Canada':'🇨🇦','Chile':'🇨🇱',
-  'Colombia':'🇨🇴','Congo':'🇨🇬','Costa Rica':'🇨🇷','Croatia':'🇭🇷','Czech Republic':'🇨🇿',
-  'Czechia':'🇨🇿','Denmark':'🇩🇰','Ecuador':'🇪🇨','Egypt':'🇪🇬','England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-  'Estonia':'🇪🇪','Ethiopia':'🇪🇹','Finland':'🇫🇮','France':'🇫🇷','Gambia':'🇬🇲',
-  'Georgia':'🇬🇪','Germany':'🇩🇪','Ghana':'🇬🇭','Greece':'🇬🇷','Guinea':'🇬🇳',
-  'Hungary':'🇭🇺','Iceland':'🇮🇸','Iran':'🇮🇷','Ireland':'🇮🇪','Israel':'🇮🇱',
-  'Italy':'🇮🇹','Ivory Coast':'🇨🇮',"Côte d'Ivoire":'🇨🇮','Jamaica':'🇯🇲','Japan':'🇯🇵',
-  'Jordan':'🇯🇴','Kosovo':'🇽🇰','Latvia':'🇱🇻','Libya':'🇱🇾','Lithuania':'🇱🇹',
-  'Luxembourg':'🇱🇺','Mali':'🇲🇱','Malta':'🇲🇹','Mauritania':'🇲🇷','Mexico':'🇲🇽',
-  'Moldova':'🇲🇩','Montenegro':'🇲🇪','Morocco':'🇲🇦','Netherlands':'🇳🇱','Nigeria':'🇳🇬',
-  'North Macedonia':'🇲🇰','Northern Ireland':'🏴󠁧󠁢󠁮󠁩󠁲󠁿','Norway':'🇳🇴','Paraguay':'🇵🇾',
-  'Peru':'🇵🇪','Poland':'🇵🇱','Portugal':'🇵🇹','Romania':'🇷🇴','Russia':'🇷🇺',
-  'Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Senegal':'🇸🇳','Serbia':'🇷🇸','Sierra Leone':'🇸🇱',
-  'Slovakia':'🇸🇰','Slovenia':'🇸🇮','South Korea':'🇰🇷','Spain':'🇪🇸','Sweden':'🇸🇪',
-  'Switzerland':'🇨🇭','Tanzania':'🇹🇿','Togo':'🇹🇬','Tunisia':'🇹🇳','Turkey':'🇹🇷',
-  'Uganda':'🇺🇬','Ukraine':'🇺🇦','United States':'🇺🇸','Uruguay':'🇺🇾','Venezuela':'🇻🇪',
-  'Wales':'🏴󠁧󠁢󠁷󠁬󠁳󠁿','Zambia':'🇿🇲','Zimbabwe':'🇿🇼',
+  'Afghanistan':'af','Albania':'al','Algeria':'dz','Angola':'ao','Argentina':'ar',
+  'Armenia':'am','Australia':'au','Austria':'at','Azerbaijan':'az','Belarus':'by',
+  'Belgium':'be','Benin':'bj','Bosnia':'ba','Bosnia and Herzegovina':'ba','Brazil':'br',
+  'Bulgaria':'bg','Burkina Faso':'bf','Cameroon':'cm','Canada':'ca','Chile':'cl',
+  'Colombia':'co','Congo':'cg','Costa Rica':'cr','Croatia':'hr','Czech Republic':'cz',
+  'Czechia':'cz','Denmark':'dk','Ecuador':'ec','Egypt':'eg','England':'gb',
+  'Estonia':'ee','Ethiopia':'et','Finland':'fi','France':'fr','Gambia':'gm',
+  'Georgia':'ge','Germany':'de','Ghana':'gh','Greece':'gr','Guinea':'gn',
+  'Hungary':'hu','Iceland':'is','Iran':'ir','Ireland':'ie','Israel':'il',
+  'Italy':'it','Ivory Coast':'ci',"Cote d'Ivoire":'ci','Jamaica':'jm','Japan':'jp',
+  'Jordan':'jo','Kosovo':'xk','Latvia':'lv','Libya':'ly','Lithuania':'lt',
+  'Luxembourg':'lu','Mali':'ml','Malta':'mt','Mauritania':'mr','Mexico':'mx',
+  'Moldova':'md','Montenegro':'me','Morocco':'ma','Netherlands':'nl','Nigeria':'ng',
+  'North Macedonia':'mk','Northern Ireland':'gb','Norway':'no','Paraguay':'py',
+  'Peru':'pe','Poland':'pl','Portugal':'pt','Romania':'ro','Russia':'ru',
+  'Scotland':'gb','Senegal':'sn','Serbia':'rs','Sierra Leone':'sl',
+  'Slovakia':'sk','Slovenia':'si','South Korea':'kr','Spain':'es','Sweden':'se',
+  'Switzerland':'ch','Tanzania':'tz','Togo':'tg','Tunisia':'tn','Turkey':'tr',
+  'Uganda':'ug','Ukraine':'ua','United States':'us','Uruguay':'uy','Venezuela':'ve',
+  'Wales':'gb','Zambia':'zm','Zimbabwe':'zw','Faroe Islands':'fo','Iceland':'is',
 };
 
-function flag(nat){return FLAGS[nat]||'🏳️'}
+function flag(nat){
+  const code=FLAGS[nat];
+  if(!code)return '';
+  return '<img src="https://flagcdn.com/20x15/'+code+'.png" width="20" height="15" style="border-radius:2px;vertical-align:middle;margin-right:4px" alt="'+nat+'">';
+}
 function ini(n){return(n||'??').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]||'?').join('').toUpperCase()}
 
 function photoEl(url, col, name, cls, size){
