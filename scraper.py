@@ -38,10 +38,8 @@ LEAGUES = [
     # Chorvatsko
     {"id": 210, "name": "Chorvatsko (1. liga)",   "country": "Croatia",     "tier": 1, "season_type": "fall_spring"},
     {"id": 211, "name": "Chorvatsko (2. liga)",   "country": "Croatia",     "tier": 2, "season_type": "fall_spring"},
-    # Kosovo
-    {"id": 365, "name": "Kosovo (1. liga)",       "country": "Kosovo",      "tier": 1, "season_type": "fall_spring"},
     # Lotyšsko — jaro-podzim
-    {"id": 271, "name": "Lotyšsko (1. liga)",     "country": "Latvia",      "tier": 1, "season_type": "spring_fall"},
+    {"id": 365, "name": "Lotyšsko (1. liga)",     "country": "Latvia",      "tier": 1, "season_type": "spring_fall"},
     # Maďarsko
     {"id": 271, "name": "Maďarsko (1. liga)",     "country": "Hungary",     "tier": 1, "season_type": "fall_spring"},
     # Norsko — jaro-podzim
