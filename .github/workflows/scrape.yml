@@ -27,7 +27,7 @@ jobs:
         run: pip install requests
 
       - name: Run scraper
-        run: python scraper_test.py
+        run: python scraper.py
         env:
           APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
 
