@@ -1,5 +1,5 @@
 """
-FMScouts Scraper — Apify Proxy verze (opravená autentizace)
+FMScouts Scraper — Webshare Proxy verze
 """
 
 import requests
@@ -11,15 +11,30 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-APIFY_TOKEN = os.environ.get("APIFY_TOKEN")
+WEBSHARE_USER = os.environ.get("WEBSHARE_USER")
+WEBSHARE_PASS = os.environ.get("WEBSHARE_PASS")
 EXCEL_FILE = "players.xlsx"
 OUTPUT_FILE = "data/players.json"
-DELAY_MIN = 3
-DELAY_MAX = 8
+DELAY_MIN = 4
+DELAY_MAX = 9
 BURST_EVERY = 15
-BURST_PAUSE = (20, 40)
+BURST_PAUSE = (25, 45)
 MAX_RETRIES = 3
 TIMEOUT = 15
+
+# 10 Webshare proxy IP:PORT
+PROXIES = [
+    ("38.154.203.95", 5863),
+    ("198.105.121.200", 6462),
+    ("64.137.96.74", 6641),
+    ("209.127.138.10", 5784),
+    ("38.154.185.97", 6370),
+    ("84.247.60.125", 6095),
+    ("142.111.67.146", 5611),
+    ("191.96.254.138", 6185),
+    ("23.229.19.94", 8689),
+    ("2.57.20.2", 6983),
+]
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
@@ -30,16 +45,10 @@ USER_AGENTS = [
 
 _req_count = 0
 
-def make_session():
-    s = requests.Session()
-    if APIFY_TOKEN:
-        # Správný formát Apify proxy URL
-        proxy_url = f"http://auto:{APIFY_TOKEN}@proxy.apify.com:8000"
-        s.proxies = {"http": proxy_url, "https": proxy_url}
-        print(f"✓ Apify proxy aktivní (auto skupina)")
-    else:
-        print("⚠ Bez proxy")
-    return s
+def get_proxy():
+    ip, port = random.choice(PROXIES)
+    proxy_url = f"http://{WEBSHARE_USER}:{WEBSHARE_PASS}@{ip}:{port}"
+    return {"http": proxy_url, "https": proxy_url}
 
 def get_headers():
     return {
@@ -64,18 +73,15 @@ def smart_delay():
         print(f"  ☕ Pauza {pause:.0f}s...")
         time.sleep(pause)
 
-def fetch(url, session, retries=0):
+def fetch(url, retries=0):
     smart_delay()
     try:
-        r = session.get(url, headers=get_headers(), timeout=TIMEOUT)
-        if r.status_code == 407:
-            print(f"  🚫 Proxy auth chyba 407 — zkouším bez proxy")
-            r = requests.get(url, headers=get_headers(), timeout=TIMEOUT)
+        r = requests.get(url, headers=get_headers(), proxies=get_proxy(), timeout=TIMEOUT)
         if r.status_code == 429:
             wait = int(r.headers.get("Retry-After", 60))
             print(f"  ⚠ Rate limit, čekám {wait}s...")
             time.sleep(wait)
-            return fetch(url, session, retries)
+            return fetch(url, retries)
         if r.status_code in (403, 401):
             print(f"  🚫 Blokováno ({r.status_code})")
             return None
@@ -84,7 +90,7 @@ def fetch(url, session, retries=0):
     except Exception as e:
         if retries < MAX_RETRIES:
             time.sleep((retries + 1) * 5)
-            return fetch(url, session, retries + 1)
+            return fetch(url, retries + 1)
         print(f"  ✗ {e}")
         return None
 
@@ -115,7 +121,7 @@ def load_players(path):
     print(f"✓ Načteno {len(players)} hráčů z Excelu")
     return players
 
-def scrape_player(p, session):
+def scrape_player(p):
     result = {
         **p,
         "data": {}, "stats": {}, "ratings": [],
@@ -124,7 +130,7 @@ def scrape_player(p, session):
     }
 
     if p["profileUrl"]:
-        d = fetch(p["profileUrl"], session)
+        d = fetch(p["profileUrl"])
         if d and "player" in d:
             pl = d["player"]
             result["data"] = {
@@ -137,7 +143,7 @@ def scrape_player(p, session):
             }
 
     if p["statsUrl"]:
-        d = fetch(p["statsUrl"], session)
+        d = fetch(p["statsUrl"])
         if d and "statistics" in d:
             s = d["statistics"]
             result["stats"] = {
@@ -157,7 +163,7 @@ def scrape_player(p, session):
             }
 
     if p["ratingsUrl"]:
-        d = fetch(p["ratingsUrl"], session)
+        d = fetch(p["ratingsUrl"])
         if d and "ratings" in d:
             rats = [r for r in d["ratings"] if r.get("rating")]
             result["ratings"] = [
@@ -188,25 +194,31 @@ def save(players, path):
 def main():
     print(f"=== FMScouts Scraper {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} ===\n")
 
+    if not WEBSHARE_USER or not WEBSHARE_PASS:
+        print("❌ WEBSHARE_USER nebo WEBSHARE_PASS není nastaven!")
+        return
+
     players = load_players(EXCEL_FILE)
-    session = make_session()
+    print(f"✓ Webshare proxy aktivní ({len(PROXIES)} IP adres, rotace)\n")
 
     # Test prvního hráče
-    print("\n--- Test první hráč ---")
-    test = scrape_player(players[0], session)
+    print("--- Test ---")
+    test = scrape_player(players[0])
     if test.get("data") or test.get("stats") or test.get("ratings"):
-        print(f"✓ Test OK! Rating: {test.get('avgRating')}, Tým: {test.get('data', {}).get('team')}")
+        print(f"✓ Proxy funguje! Rating: {test.get('avgRating')}, Tým: {test.get('data', {}).get('team')}\n")
     else:
-        print("✗ Test selhal — proxy nefunguje pro Sofascore")
+        print("✗ Test selhal — Sofascore blokuje i Webshare proxy")
         save(players, OUTPUT_FILE)
         return
 
+    # Načti existující data pro resume
     existing = {}
     if Path(OUTPUT_FILE).exists():
         try:
             with open(OUTPUT_FILE, encoding="utf-8") as f:
                 saved = json.load(f)
             existing = {p["id"]: p for p in saved.get("players", [])}
+            print(f"↺ Resume: {len(existing)} existujících záznamů\n")
         except Exception:
             pass
 
@@ -221,7 +233,7 @@ def main():
             continue
 
         print(f"[{i}/{total}] {player['name']}...", end=" ", flush=True)
-        scraped = scrape_player(player, session)
+        scraped = scrape_player(player)
         results.append(scraped)
         parts = []
         if scraped.get("avgRating"): parts.append(f"★ {scraped['avgRating']:.2f}")
