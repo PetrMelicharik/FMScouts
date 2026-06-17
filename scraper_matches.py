@@ -15,9 +15,11 @@ API_KEY         = os.environ.get("APIFOOTBALL_KEY")
 SUPABASE_URL    = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY    = os.environ.get("SUPABASE_SERVICE_KEY")
 BASE_URL        = "https://v3.football.api-sports.io"
-SEASON          = None  # auto-detect per liga
+# Kolik dní zpět stahovat (0 = celá sezóna, 14 = posledních 14 dní)
+DAYS_BACK       = int(os.environ.get("DAYS_BACK", "14"))
 
-LEAGUES = [
+# Všechny ligy
+ALL_LEAGUES = [
     {"id": 345, "name": "Česko (1. liga)",      "season_type": "fall_spring"},
     {"id": 119, "name": "Dánsko (1. liga)",      "season_type": "fall_spring"},
     {"id": 120, "name": "Dánsko (2. liga)",      "season_type": "fall_spring"},
@@ -35,6 +37,13 @@ LEAGUES = [
     {"id": 207, "name": "Švýcarsko (1. liga)",   "season_type": "fall_spring"},
     {"id": 333, "name": "Ukrajina (1. liga)",    "season_type": "fall_spring"},
 ]
+
+# Jen ligy jaro-podzim (aktivní sezóna 2026)
+SPRING_FALL_LEAGUES = [l for l in ALL_LEAGUES if l["season_type"] == "spring_fall"]
+
+# Vyber podle env proměnné LEAGUES_MODE
+LEAGUES_MODE = os.environ.get("LEAGUES_MODE", "all")
+LEAGUES = SPRING_FALL_LEAGUES if LEAGUES_MODE == "spring_fall" else ALL_LEAGUES
 
 def current_season(season_type):
     now = datetime.utcnow()
@@ -92,17 +101,26 @@ def sb_get_match_ids():
 
 # ── Stažení zápasů ─────────────────────────────────────────────────────────────
 
-def fetch_fixtures(league_id, season):
-    """Stáhne odehrané zápasy za posledních 14 dní."""
-    date_from = (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%d")
-    date_to   = datetime.utcnow().strftime("%Y-%m-%d")
-    fixtures = api_get("fixtures", {
-        "league": league_id,
-        "season": season,
-        "from":   date_from,
-        "to":     date_to,
-        "status": "FT"  # jen odehrané
-    })
+def fetch_fixtures(league_id, season, full_season=False):
+    """Stáhne odehrané zápasy. full_season=True stáhne celou sezónu."""
+    if full_season:
+        # Celá sezóna — bez omezení datumu
+        fixtures = api_get("fixtures", {
+            "league": league_id,
+            "season": season,
+            "status": "FT"
+        })
+    else:
+        # Posledních N dní
+        date_from = (datetime.utcnow() - timedelta(days=DAYS_BACK)).strftime("%Y-%m-%d")
+        date_to   = datetime.utcnow().strftime("%Y-%m-%d")
+        fixtures = api_get("fixtures", {
+            "league": league_id,
+            "season": season,
+            "from":   date_from,
+            "to":     date_to,
+            "status": "FT"
+        })
     return fixtures
 
 def fetch_fixture_players(fixture_id):
@@ -111,13 +129,13 @@ def fetch_fixture_players(fixture_id):
 
 # ── Zpracování ─────────────────────────────────────────────────────────────────
 
-def process_league(league, existing_ids):
+def process_league(league, existing_ids, full_season=False):
     lid    = league["id"]
     season = current_season(league["season_type"])
     lname  = league["name"]
     print(f"\n  {lname} (sezóna {season})")
 
-    fixtures = fetch_fixtures(lid, season)
+    fixtures = fetch_fixtures(lid, season, full_season=full_season)
     if not fixtures:
         print(f"    Žádné nové zápasy")
         return 0, 0
@@ -212,8 +230,15 @@ def main():
     total_matches = 0
     total_stats   = 0
 
+    # Pokud DAYS_BACK=0 nebo prázdná DB, stáhni celou sezónu
+    full_season = DAYS_BACK == 0 or len(existing_ids) == 0
+    if full_season:
+        print("⚡ Stahuju celou sezónu!\n")
+    else:
+        print(f"📅 Stahuju posledních {DAYS_BACK} dní\n")
+
     for league in LEAGUES:
-        m, s = process_league(league, existing_ids)
+        m, s = process_league(league, existing_ids, full_season=full_season)
         total_matches += m
         total_stats   += s
 
