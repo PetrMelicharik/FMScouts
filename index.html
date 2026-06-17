@@ -255,14 +255,20 @@ function loadPlayerForm(playerId, container) {
   sbGet('player_match_stats', {
     'select': 'rating,goals,assists,minutes,match_id,matches!inner(match_date,home_team,away_team,round)',
     'player_id': 'eq.'+playerId,
-    'order': 'matches.match_date.desc',
+    'order': 'match_id.desc',
     'limit': '6'
   }).then(function(data) {
     if(!data || !data.length) {
       container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Žádné zápasové záznamy.</div>';
       return;
     }
-    var sorted = data.slice().reverse();
+    // Seřaď podle data zápasu
+    data.sort(function(a,b){
+      var da = a.matches && a.matches.match_date ? new Date(a.matches.match_date) : 0;
+      var db = b.matches && b.matches.match_date ? new Date(b.matches.match_date) : 0;
+      return db - da; // nejnovější první v seznamu
+    });
+    var sorted = data.slice().reverse(); // chronologicky pro graf
     var ratings = sorted.map(function(d){return parseFloat(d.rating)||0;});
     var minR = Math.min.apply(null, ratings);
     var maxR = Math.max.apply(null, ratings);
