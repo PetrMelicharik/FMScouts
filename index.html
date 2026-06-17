@@ -160,6 +160,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <option value="age_asc">Věk ↑</option>
         <option value="age_desc">Věk ↓</option>
       </select>
+      <input class="inp" type="number" id="fage_min" placeholder="Věk od" min="15" max="45" style="width:90px" oninput="renderPlayers()">
+      <input class="inp" type="number" id="fage_max" placeholder="Věk do" min="15" max="45" style="width:90px" oninput="renderPlayers()">
     </div>
     <div class="grid" id="pgrid"></div>
   </div>
@@ -383,10 +385,14 @@ function getList(){
   var pos=document.getElementById('fpos').value;
   var league=document.getElementById('fleague').value;
   var sort=document.getElementById('fsort').value;
+  var ageMin=parseInt(document.getElementById('fage_min').value)||0;
+  var ageMax=parseInt(document.getElementById('fage_max').value)||99;
   var list=players.filter(function(p){
     if(q){var s=(p.name+' '+(p.teamName||'')+' '+(p.nationality||'')).toLowerCase();if(s.indexOf(q)<0)return false;}
     if(pos&&p.position!==pos)return false;
     if(league&&p.leagueName!==league)return false;
+    if(ageMin>0&&(p.age||0)<ageMin)return false;
+    if(ageMax<99&&(p.age||99)>ageMax)return false;
     return true;
   });
   if(sort==='rating')list.sort(function(a,b){return(parseFloat(b.rating)||0)-(parseFloat(a.rating)||0);});
