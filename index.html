@@ -188,6 +188,31 @@ const FLAGS={
   'Wales':'gb','Zambia':'zm','Zimbabwe':'zw','Faroe Islands':'fo','Iceland':'is',
 };
 
+
+const LEAGUE_NAMES={
+  316:'Premijer liga',
+  175:'Parva liga',176:'Vtora liga',
+  345:'Chance liga',346:'Chance národní liga',
+  119:'3F Superliga',120:'1. Division',
+  329:'Meistriliiga',
+  244:'Veikkausliiga',
+  210:'HNL',211:'2. HNL',
+  365:'Superliga',
+  271:'Virsliga',
+  271:'OTP Bank Liga',
+  103:'Eliteserien',104:'1. divisjon',
+  106:'PKO BP Ekstraklasa',107:'1. Liga',
+  218:'Bundesliga',219:'2. Liga',
+  283:'Superliga',284:'Liga II',
+  332:'Niké liga',
+  373:'PrvaLiga',
+  286:'Super liga',287:'Prva liga',
+  113:'Allsvenskan',114:'Superettan',
+  207:'Super League',208:'Challenge League',
+  333:'Premier League',334:'Persha liha',
+};
+function leagueName(p){return LEAGUE_NAMES[p.leagueId]||p.leagueName||'';}
+
 function flag(nat){
   const code=FLAGS[nat];
   if(!code)return '';
@@ -270,7 +295,7 @@ function renderPlayers(){
         <div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">${p.height?p.height+' cm':'—'}</div></div>
         <div class="ci" style="grid-column:1/-1"><div class="ci-lbl">Národnost</div><div class="ci-val"><span class="flag">${f}</span>${p.nationality||'—'}</div></div>
       </div>
-      <div class="card-league"><span class="ldot"></span>${p.leagueName||''}</div>
+      <div class="card-league"><span class="ldot"></span>${leagueName(p)}</div>
     </div>`;
   }).join('');
 
@@ -291,7 +316,7 @@ function openPlayer(id,teamId){
       <div style="display:flex;align-items:center">${ph}</div>
       <div>
         <div class="mname">${p.name}</div>
-        <div class="msub">${p.teamName||'—'} · ${p.leagueName||'—'}</div>
+        <div class="msub">${p.teamName||'—'} · ${leagueName(p)}</div>
       </div>
       <button class="mclose" onclick="closeModal()">×</button>
     </div>`;
@@ -309,7 +334,7 @@ function openPlayer(id,teamId){
       <div class="icell"><div class="ilbl">Národnost</div><div class="ival"><span style="font-size:18px">${f}</span>${p.nationality||'—'}</div></div>
       <div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">${p.height?p.height+' cm':'—'}${p.weight?' / '+p.weight+' kg':''}</div></div>
       <div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival">${p.teamName||'—'}</div></div>
-      <div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival">${p.leagueName||'—'} · ${p.season||'—'}</div></div>
+      <div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival">${leagueName(p)} · ${p.season||'—'}</div></div>
     </div>
     <div class="no-stats">📊 Statistiky (góly, asistence, minuty, rating, radar grafy) budou dostupné po přechodu na placený plán API-Football ($19/měsíc).</div>`;
 
@@ -341,7 +366,7 @@ function renderCompare(){
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">${p.name}</div>
       <span class="badge bp">${PCS[p.position]||'—'}</span>
       <div style="font-size:12px;color:var(--muted);margin-top:6px">${p.teamName}</div>
-      <div style="font-size:11px;color:var(--muted2);margin-top:2px">${p.leagueName}</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:2px">${leagueName(p)}</div>
       <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px">
         <div class="row"><span style="font-size:11px;color:var(--muted);font-weight:500">Věk</span><span style="font-size:13px;font-weight:700">${p.age||'—'}</span></div>
         <div class="row"><span style="font-size:11px;color:var(--muted);font-weight:500">Výška</span><span style="font-size:13px;font-weight:700">${p.height?p.height+' cm':'—'}</span></div>
