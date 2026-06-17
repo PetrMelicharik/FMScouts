@@ -2,9 +2,20 @@ name: FMScouts Scraper
 
 on:
   schedule:
-    - cron: '0 3 * * 2'
-    - cron: '0 3 * * 5'
+    - cron: '0 3 * * 2'   # Úterý — hráči + zápasy
+    - cron: '0 3 * * 5'   # Pátek — hráči + zápasy
+    - cron: '0 4 * * 1'   # Pondělí — jen zápasy (po víkendu)
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Co spustit'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - players
+          - matches
 
 permissions:
   contents: write
@@ -26,15 +37,25 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run scraper
+      - name: Scrape players
+        if: ${{ github.event.inputs.mode != 'matches' }}
         run: python scraper.py
         env:
           APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
 
-      - name: Commit updated data
+      - name: Commit player data
+        if: ${{ github.event.inputs.mode != 'matches' }}
         run: |
           git config user.name "FMScouts Bot"
           git config user.email "bot@fmscouts.com"
           git add data/players.json
-          git diff --staged --quiet || git commit -m "Data update $(date +'%Y-%m-%d %H:%M')"
+          git diff --staged --quiet || git commit -m "Players update $(date +'%Y-%m-%d %H:%M')"
           git push
+
+      - name: Scrape matches
+        if: ${{ github.event.inputs.mode != 'players' }}
+        run: python scraper_matches.py
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
