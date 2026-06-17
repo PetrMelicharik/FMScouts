@@ -91,6 +91,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
 
+.tow-cat{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--s1);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;white-space:nowrap}
+.tow-cat:hover{border-color:var(--green);color:var(--green)}
+.tow-cat.active{background:var(--green);color:#fff;border-color:var(--green)}
 .tow-row{background:var(--s1);border:1.5px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .12s;margin-bottom:8px}
 .tow-row:hover{border-color:var(--green-border);transform:translateY(-1px)}
 .tow-rank{font-size:15px;font-weight:800;color:var(--muted);min-width:22px}
@@ -168,7 +171,39 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <div class="view" id="view-tow">
     <div class="page-title">Top hráči</div>
-    <div class="page-sub">Top 25 hráčů dle průměrného sezónního ratingu</div>
+    <div class="page-sub">Top 25 hráčů dle vybrané kategorie</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <select class="inp" id="tow-league" onchange="renderTow()">
+        <option value="">Všechny ligy</option>
+      </select>
+      <select class="inp" id="tow-pos" onchange="renderTow()">
+        <option value="">Všechny pozice</option>
+        <option value="Goalkeeper">Brankáři</option>
+        <option value="Defender">Obránci</option>
+        <option value="Midfielder">Záložníci</option>
+        <option value="Attacker">Útočníci</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap" id="tow-cats">
+      <button class="tow-cat active" onclick="setTowCat('rating')">⭐ Rating</button>
+      <button class="tow-cat" onclick="setTowCat('goals')">⚽ Góly</button>
+      <button class="tow-cat" onclick="setTowCat('assists')">🅰 Asistence</button>
+      <button class="tow-cat" onclick="setTowCat('points')">📊 Body (G+A)</button>
+      <button class="tow-cat" onclick="setTowCat('shots')">🎯 Střely</button>
+      <button class="tow-cat" onclick="setTowCat('passes')">🔁 Přihrávky</button>
+      <button class="tow-cat" onclick="setTowCat('tackles')">💪 Souboje</button>
+      <button class="tow-cat" onclick="setTowCat('interceptions')">✋ Přerušení</button>
+      <button class="tow-cat" onclick="setTowCat('dribbles')">🏃 Driblinky</button>
+      <button class="tow-cat" onclick="setTowCat('dribblesWon')">✅ Dribl. úsp.</button>
+      <button class="tow-cat" onclick="setTowCat('duels')">⚔️ Duely</button>
+      <button class="tow-cat" onclick="setTowCat('duelsWon')">🏆 Duely vyhr.</button>
+      <button class="tow-cat" onclick="setTowCat('shotsOnTarget')">🎯 Střely na br.</button>
+      <button class="tow-cat" onclick="setTowCat('keyPasses')">🔑 Klíč. přihr.</button>
+      <button class="tow-cat" onclick="setTowCat('minutesPlayed')">⏱ Minuty</button>
+      <button class="tow-cat" onclick="setTowCat('appearances')">📋 Zápasy</button>
+      <button class="tow-cat" onclick="setTowCat('yellowCards')">🟨 Žluté karty</button>
+      <button class="tow-cat" onclick="setTowCat('foulsCommitted')">🚫 Fauly</button>
+    </div>
     <div id="tow-list"></div>
   </div>
 
@@ -545,13 +580,72 @@ function toggleCmp(id,teamId){
   if(current&&current.id==id)openPlayer(id,teamId);
 }
 
+var towCat = 'rating';
+function setTowCat(cat){
+  towCat=cat;
+  document.querySelectorAll('.tow-cat').forEach(function(b){b.classList.remove('active');});
+  event.target.classList.add('active');
+  renderTow();
+}
+
+function buildTowFilter(){
+  var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
+  var sel=document.getElementById('tow-league');
+  if(sel.options.length<=1){
+    leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;sel.appendChild(o);});
+  }
+}
+
 function renderTow(){
-  var sorted=players.filter(function(p){return parseFloat(p.rating)&&(p.appearances||0)>=5;})
-    .sort(function(a,b){return(parseFloat(b.rating)||0)-(parseFloat(a.rating)||0);}).slice(0,25);
+  buildTowFilter();
+  var league=document.getElementById('tow-league').value;
+  var pos=document.getElementById('tow-pos').value;
+
+  var cats={
+    rating:{field:'rating',label:'Rating',fmt:function(v){return parseFloat(v).toFixed(2);},min:5,col:function(p){return rc(p.rating);}},
+    goals:{field:'goals',label:'Góly',fmt:function(v){return v;},min:1,col:function(){return '#16a34a';}},
+    assists:{field:'assists',label:'Asistence',fmt:function(v){return v;},min:1,col:function(){return '#2563eb';}},
+    points:{field:'points',label:'Body',fmt:function(v){return v;},min:1,col:function(){return '#7c3aed';}},
+    shots:{field:'shots',label:'Střely',fmt:function(v){return v;},min:1,col:function(){return '#d97706';}},
+    passes:{field:'passes',label:'Přihrávky',fmt:function(v){return v;},min:1,col:function(){return '#2563eb';}},
+    tackles:{field:'tackles',label:'Souboje',fmt:function(v){return v;},min:1,col:function(){return '#dc2626';}},
+    interceptions:{field:'interceptions',label:'Přerušení',fmt:function(v){return v;},min:1,col:function(){return '#7c3aed';}},
+    dribbles:{field:'dribbles',label:'Driblinky',fmt:function(v){return v;},min:1,col:function(){return '#d97706';}},
+    dribblesWon:{field:'dribblesWon',label:'Dribl. úsp.',fmt:function(v){return v;},min:1,col:function(){return '#16a34a';}},
+    duels:{field:'duels',label:'Duely',fmt:function(v){return v;},min:1,col:function(){return '#dc2626';}},
+    duelsWon:{field:'duelsWon',label:'Duely vyhr.',fmt:function(v){return v;},min:1,col:function(){return '#16a34a';}},
+    shotsOnTarget:{field:'shotsOnTarget',label:'Střely na br.',fmt:function(v){return v;},min:1,col:function(){return '#d97706';}},
+    keyPasses:{field:'keyPasses',label:'Klíč. přihr.',fmt:function(v){return v;},min:1,col:function(){return '#2563eb';}},
+    minutesPlayed:{field:'minutesPlayed',label:'Minuty',fmt:function(v){return v;},min:1,col:function(){return '#6b7d6b';}},
+    appearances:{field:'appearances',label:'Zápasy',fmt:function(v){return v;},min:1,col:function(){return '#6b7d6b';}},
+    yellowCards:{field:'yellowCards',label:'Žluté karty',fmt:function(v){return v;},min:1,col:function(){return '#d97706';}},
+    foulsCommitted:{field:'foulsCommitted',label:'Fauly',fmt:function(v){return v;},min:1,col:function(){return '#dc2626';}},
+  };
+  var cat=cats[towCat]||cats.rating;
+
+  var list=players.filter(function(p){
+    if(league&&p.leagueName!==league)return false;
+    if(pos&&p.position!==pos)return false;
+    if(towCat==='rating')return parseFloat(p.rating)&&(p.appearances||0)>=5;
+    if(towCat==='points')return ((p.goals||0)+(p.assists||0))>=cat.min;
+    return (p[cat.field]||0)>=cat.min;
+  });
+
+  // Add points field
+  list.forEach(function(p){p.points=(p.goals||0)+(p.assists||0);});
+
+  list.sort(function(a,b){
+    var va=towCat==='rating'?parseFloat(a.rating)||0:a[cat.field]||0;
+    var vb=towCat==='rating'?parseFloat(b.rating)||0:b[cat.field]||0;
+    return vb-va;
+  });
+  list=list.slice(0,25);
+
   var el=document.getElementById('tow-list');
-  if(!sorted.length){el.innerHTML='<div class="empty"><h3>Žádná data</h3></div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty"><h3>Žádná data</h3><p>Zkus jiný filtr nebo kategorii</p></div>';return;}
   el.innerHTML='';
-  sorted.forEach(function(p,i){
+
+  list.forEach(function(p,i){
     var col=PC[p.position]||'#3ab54a';
     var row=document.createElement('div');
     row.className='tow-row';
@@ -559,16 +653,17 @@ function renderTow(){
     var rankClass=i===0?'g':i===1?'s':i===2?'b':'';
     row.innerHTML='<div class="tow-rank '+rankClass+'">'+(i+1)+'</div>';
     row.appendChild(makeAv(p.photo,col,p.name,36));
-    row.innerHTML+='';//keep children
     var info=document.createElement('div');
     info.style.cssText='flex:1;min-width:0';
     info.innerHTML='<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
       +'<div style="font-size:11px;color:var(--muted);margin-top:1px"><span class="badge bp" style="font-size:9px;padding:1px 5px">'+(PCS[p.position]||'—')+'</span> '+p.teamName+' · '+ll(p)+'</div>';
     row.appendChild(info);
-    var rEl=document.createElement('div');
-    rEl.style.cssText='font-size:17px;font-weight:800;color:'+rc(p.rating);
-    rEl.textContent=parseFloat(p.rating).toFixed(2);
-    row.appendChild(rEl);
+    var val=towCat==='rating'?parseFloat(p.rating):p[cat.field]||0;
+    var valEl=document.createElement('div');
+    valEl.style.cssText='text-align:right';
+    valEl.innerHTML='<div style="font-size:17px;font-weight:800;color:'+cat.col(p)+'">'+cat.fmt(val)+'</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+cat.label+'</div>';
+    row.appendChild(valEl);
     el.appendChild(row);
   });
 }
