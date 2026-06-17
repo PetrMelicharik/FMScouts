@@ -253,7 +253,7 @@ function loadPlayerForm(playerId, container) {
         + '<div style="font-size:18px;font-weight:800;color:'+col+';min-width:36px">'+r.toFixed(2)+'</div>'
         + '<div style="flex:1;min-width:0">'
         + '<div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+matchStr+'</div>'
-        + '<div style="font-size:10px;color:var(--muted)">'+dateStr+(d.goals?' · ⚽ '+d.goals:'')+(d.assists?' · 🅰 '+d.assists:'')+(d.minutes?' · '+d.minutes+'''  :'')+'</div>'
+        + '<div style="font-size:10px;color:var(--muted)">'+dateStr+(d.goals?' · ⚽ '+d.goals:'')+(d.assists?' · 🅰 '+d.assists:'')+(d.minutes?' · '+d.minutes+'min':'')+'</div>'
         + '</div>'
         + '</div>';
     });
