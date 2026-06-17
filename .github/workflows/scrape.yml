@@ -1,0 +1,40 @@
+name: FMScouts Scraper
+
+on:
+  schedule:
+    - cron: '0 3 * * 2'
+    - cron: '0 3 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run scraper
+        run: python scraper_test.py
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+
+      - name: Commit updated data
+        run: |
+          git config user.name "FMScouts Bot"
+          git config user.email "bot@fmscouts.com"
+          git add data/players.json
+          git diff --staged --quiet || git commit -m "Data update $(date +'%Y-%m-%d %H:%M')"
+          git push
