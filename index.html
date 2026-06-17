@@ -5,99 +5,158 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FMScouts</title>
 <style>
-:root{--bg:#0c0e12;--s1:#13161c;--s2:#1a1e26;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);--text:#dde2ec;--muted:#5a6278;--muted2:#8892a8;--accent:#3b82f6;--accent-bg:rgba(59,130,246,0.1);--accent-border:rgba(59,130,246,0.25);--green:#22c55e;--amber:#f59e0b;--r:10px;--r-sm:6px}
+:root{
+  --bg:#f0f2f5;
+  --s1:#ffffff;
+  --s2:#f7f8fa;
+  --s3:#eef0f3;
+  --border:#e3e6eb;
+  --border2:#d0d4db;
+  --text:#1a1d23;
+  --muted:#7a8194;
+  --muted2:#9aa0b0;
+  --accent:#2563eb;
+  --accent-bg:#eff4ff;
+  --accent-border:#bfcfff;
+  --green:#16a34a;
+  --green-bg:#f0fdf4;
+  --amber:#d97706;
+  --red:#dc2626;
+  --purple:#7c3aed;
+  --r:12px;--r-sm:8px;
+}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh}
+
 .shell{display:flex;min-height:100vh}
-.sidebar{width:230px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50;overflow-y:auto}
-.main{margin-left:230px;flex:1;padding:24px;min-width:0}
+.sidebar{width:240px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50;overflow-y:auto}
+.main{margin-left:240px;flex:1;padding:28px;min-width:0}
+
 .logo{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
-.logo-text{font-size:16px;font-weight:700}
-.logo-text span{color:var(--muted)}
-.nav-sec{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:16px 16px 6px}
-.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;color:var(--muted2);cursor:pointer;font-size:13px;transition:all .12s;border-left:2px solid transparent}
+.logo-icon{width:34px;height:34px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;letter-spacing:-.5px}
+.logo-text{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.logo-sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+.nav-sec{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);padding:18px 16px 6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;color:var(--muted);cursor:pointer;font-size:13px;font-weight:500;transition:all .12s;border-radius:8px;margin:1px 8px}
 .nav-item:hover{color:var(--text);background:var(--s2)}
-.nav-item.active{color:var(--accent);background:var(--accent-bg);border-left-color:var(--accent)}
+.nav-item.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
 .nav-item svg{width:15px;height:15px;flex-shrink:0}
-.nav-league{font-size:11px;padding:5px 16px;color:var(--muted);cursor:pointer;transition:all .12s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-league{font-size:12px;padding:6px 16px;color:var(--muted);cursor:pointer;transition:all .12s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:6px;margin:1px 8px}
 .nav-league:hover{color:var(--text);background:var(--s2)}
-.sidebar-footer{margin-top:auto;padding:14px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
-.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:5px;vertical-align:middle}
+
+.sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:middle}
+
 .view{display:none}.view.active{display:block}
-.page-title{font-size:20px;font-weight:700;margin-bottom:4px}
-.page-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+
+.page-header{margin-bottom:24px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.4px;color:var(--text)}
+.page-sub{font-size:13px;color:var(--muted);margin-top:4px}
+
 .controls{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-.inp{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-size:13px;padding:8px 12px;outline:none}
-.inp:focus{border-color:var(--accent)}
-.inp::placeholder{color:var(--muted)}
-.inp option{background:var(--s2)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
-.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:border-color .12s,transform .1s}
-.card:hover{border-color:var(--border2);transform:translateY(-1px)}
-.card.pinned{border-color:var(--accent-border)}
-.card-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-.pname{font-size:13px;font-weight:600}
-.pteam{font-size:11px;color:var(--muted);margin-top:1px}
-.badge{display:inline-flex;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
-.bp{background:rgba(59,130,246,.15);color:var(--accent)}
-.card-info{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
-.ci{background:var(--s2);border-radius:var(--r-sm);padding:5px 8px}
-.ci-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-.ci-val{font-size:12px;font-weight:500;margin-top:1px}
-.card-league{font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
-.modal{background:var(--s1);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
-.modal-head{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
-.mav{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0}
-.mname{font-size:17px;font-weight:700}
-.msub{font-size:12px;color:var(--muted);margin-top:2px}
-.mclose{margin-left:auto;background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;align-self:flex-start}
-.mbody{padding:20px;display:flex;flex-direction:column;gap:10px}
-.mfoot{padding:0 20px 20px}
+.inp{background:var(--s1);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:13px;padding:9px 13px;outline:none;transition:border .15s;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,0.1)}
+.inp::placeholder{color:var(--muted2)}
+.inp option{background:#fff}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.card{background:var(--s1);border:1.5px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.card:hover{border-color:var(--accent-border);transform:translateY(-2px);box-shadow:0 4px 12px rgba(37,99,235,0.1)}
+.card.pinned{border-color:var(--accent);background:var(--accent-bg)}
+
+.card-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;border:2px solid rgba(0,0,0,0.06)}
+.pname{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+.pteam{font-size:11px;color:var(--muted);margin-top:2px}
+
+.badge{display:inline-flex;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;letter-spacing:.03em}
+.bp{background:var(--accent-bg);color:var(--accent)}
+.bg{background:var(--green-bg);color:var(--green)}
+
+.card-info{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.ci{background:var(--s2);border-radius:var(--r-sm);padding:7px 10px;border:1px solid var(--border)}
+.ci-lbl{font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.ci-val{font-size:12px;font-weight:600;margin-top:2px;color:var(--text)}
+
+.card-league{font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:5px}
+.league-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(15,20,35,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:var(--s1);border:1.5px solid var(--border);border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.modal-head{padding:22px 22px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.mav{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0;border:2px solid rgba(0,0,0,0.06)}
+.mname{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.msub{font-size:12px;color:var(--muted);margin-top:3px}
+.mclose{margin-left:auto;background:var(--s2);border:1px solid var(--border);color:var(--muted);font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.mclose:hover{background:var(--s3);color:var(--text)}
+.mbody{padding:22px;display:flex;flex-direction:column;gap:12px}
+.mfoot{padding:0 22px 22px}
+
 .igrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.icell{background:var(--s2);border-radius:var(--r-sm);padding:10px 12px}
-.ilbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.ival{font-size:14px;font-weight:600;margin-top:3px}
+.icell{background:var(--s2);border-radius:var(--r-sm);padding:11px 14px;border:1px solid var(--border)}
+.ilbl{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.ival{font-size:15px;font-weight:700;margin-top:3px;color:var(--text)}
+
 .photo-wrap{text-align:center;margin-bottom:4px}
-.player-photo{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--border2)}
-.no-stats{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--amber)}
-.btn{padding:8px 14px;border-radius:var(--r-sm);border:1px solid var(--border2);background:transparent;color:var(--muted2);font-size:13px;cursor:pointer;width:100%;margin-top:0}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500}
-.hint{background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:var(--r);padding:11px 14px;font-size:13px;color:var(--accent);margin-bottom:16px}
-.empty{text-align:center;padding:60px 20px;color:var(--muted)}
-.empty h3{font-size:16px;color:var(--text);margin-bottom:6px}
+.player-photo{width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+
+.no-stats{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:#92400e;line-height:1.5}
+
+.btn{padding:10px 16px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--s2);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;width:100%;transition:all .12s}
+.btn:hover{border-color:var(--border2);background:var(--s3)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;box-shadow:0 2px 6px rgba(37,99,235,0.3)}
+.btn.primary:hover{background:#1d4ed8;box-shadow:0 3px 10px rgba(37,99,235,0.35)}
+
+.hint{background:var(--accent-bg);border:1.5px solid var(--accent-border);border-radius:var(--r);padding:12px 16px;font-size:13px;color:var(--accent);margin-bottom:20px;font-weight:500}
+.empty{text-align:center;padding:64px 20px;color:var(--muted)}
+.empty h3{font-size:17px;font-weight:600;color:var(--text);margin-bottom:8px}
+
 .cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
-.cmp-card{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r);padding:16px;text-align:center}
+.cmp-card{background:var(--s1);border:1.5px solid var(--border);border-radius:var(--r);padding:18px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+
+.stats-count{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.stat-pill{background:var(--s1);border:1.5px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--muted);box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+.stat-pill span{color:var(--text)}
 </style>
 </head>
 <body>
 <div class="shell">
 <nav class="sidebar">
-  <div class="logo"><div class="logo-icon">FM</div><div class="logo-text">Scouts<span>.cz</span></div></div>
+  <div class="logo">
+    <div class="logo-icon">FM</div>
+    <div>
+      <div class="logo-text">FMScouts</div>
+      <div class="logo-sub">Scouting platforma</div>
+    </div>
+  </div>
   <div class="nav-sec">Přehled</div>
   <div class="nav-item active" onclick="setView('players')" id="nv-players">
-    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>Hráči
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="11" r="2"/><path d="M23 21v-1a2 2 0 0 0-2-2h-1"/></svg>
+    Hráči
   </div>
   <div class="nav-item" onclick="setView('compare')" id="nv-compare">
-    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Srovnání
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+    Srovnání
   </div>
   <div class="nav-sec">Ligy</div>
   <div id="league-nav"></div>
   <div class="sidebar-footer">
-    <div><span class="dot"></span>API-Football</div>
-    <div style="color:var(--muted2);margin-top:3px" id="last-updated">—</div>
-    <div style="margin-top:3px" id="data-stats"></div>
+    <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px"><span class="dot"></span>Živá data</div>
+    <div style="font-size:11px;color:var(--muted)" id="last-updated">—</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px" id="data-stats"></div>
   </div>
 </nav>
+
 <main class="main">
   <div class="view active" id="view-players">
-    <div class="page-title">Hráči</div>
-    <div class="page-sub" id="player-count">Načítám...</div>
+    <div class="page-header">
+      <div class="page-title">Databáze hráčů</div>
+      <div class="page-sub" id="player-count">Načítám...</div>
+    </div>
     <div class="controls">
-      <input class="inp" style="flex:1;min-width:180px" type="text" id="search" placeholder="Hledat jméno nebo klub..." oninput="renderPlayers()">
+      <input class="inp" style="flex:1;min-width:200px" type="text" id="search" placeholder="🔍  Hledat jméno, klub nebo národnost..." oninput="renderPlayers()">
       <select class="inp" id="fpos" onchange="renderPlayers()">
         <option value="">Všechny pozice</option>
         <option value="Goalkeeper">Brankáři</option>
@@ -110,16 +169,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       </select>
       <select class="inp" id="fsort" onchange="renderPlayers()">
         <option value="name">Jméno A–Z</option>
-        <option value="age_asc">Věk ↑</option>
-        <option value="age_desc">Věk ↓</option>
+        <option value="age_asc">Věk ↑ (nejmladší)</option>
+        <option value="age_desc">Věk ↓ (nejstarší)</option>
       </select>
     </div>
     <div class="grid" id="pgrid"></div>
   </div>
+
   <div class="view" id="view-compare">
-    <div class="page-title">Srovnání hráčů</div>
-    <div class="page-sub">Porovnej 2 hráče vedle sebe</div>
-    <div class="hint">Klikni na hráče → "Přidat do srovnání"</div>
+    <div class="page-header">
+      <div class="page-title">Srovnání hráčů</div>
+      <div class="page-sub">Porovnej 2 hráče vedle sebe</div>
+    </div>
+    <div class="hint">💡 Klikni na hráče → "Přidat do srovnání" — vyber 2 hráče</div>
     <div id="cmp-content"></div>
   </div>
 </main>
@@ -139,11 +201,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <script>
 let players=[], compareList=[], current=null;
-const PC={Goalkeeper:'#f59e0b',Defender:'#3b82f6',Midfielder:'#a78bfa',Attacker:'#ef4444'};
+const PC={Goalkeeper:'#d97706',Defender:'#2563eb',Midfielder:'#7c3aed',Attacker:'#dc2626'};
 const PCS={Goalkeeper:'GK',Defender:'DEF',Midfielder:'MID',Attacker:'FWD'};
 const PCZK={Goalkeeper:'Brankář',Defender:'Obránce',Midfielder:'Záložník',Attacker:'Útočník'};
+const FLAG={Czechia:'🇨🇿',Slovakia:'🇸🇰',Poland:'🇵🇱',Norway:'🇳🇴',Sweden:'🇸🇪',Denmark:'🇩🇰',Finland:'🇫🇮',Germany:'🇩🇪',Austria:'🇦🇹',Switzerland:'🇨🇭',Croatia:'🇭🇷',Serbia:'🇷🇸',Slovenia:'🇸🇮',Bosnia:'🇧🇦',Hungary:'🇭🇺',Romania:'🇷🇴',Bulgaria:'🇧🇬',Ukraine:'🇺🇦',Latvia:'🇱🇻',Estonia:'🇪🇪',Kosovo:'🇽🇰',France:'🇫🇷',Spain:'🇪🇸',Portugal:'🇵🇹',Brazil:'🇧🇷',Argentina:'🇦🇷',Nigeria:'🇳🇬',Senegal:'🇸🇳',Ghana:'🇬🇭',Ivory:'🇨🇮',Cameroon:'🇨🇲',Morocco:'🇲🇦'};
 
 function ini(n){return(n||'??').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]||'?').join('').toUpperCase()}
+function flag(nat){return FLAG[nat]||''}
 
 async function loadData(){
   try{
@@ -154,7 +218,7 @@ async function loadData(){
     if(d.meta?.lastUpdated){
       document.getElementById('last-updated').textContent=new Date(d.meta.lastUpdated).toLocaleDateString('cs-CZ');
     }
-    document.getElementById('data-stats').textContent=players.length.toLocaleString()+' hráčů';
+    document.getElementById('data-stats').textContent=players.length.toLocaleString()+' hráčů v databázi';
     buildFilters();
     renderPlayers();
   }catch(e){
@@ -169,8 +233,7 @@ function buildFilters(){
   leagues.forEach(l=>{const o=document.createElement('option');o.value=l;o.textContent=l;sel.appendChild(o);});
   const nav=document.getElementById('league-nav');
   leagues.forEach(l=>{
-    const d=document.createElement('div');
-    d.className='nav-league';d.textContent=l;
+    const d=document.createElement('div');d.className='nav-league';d.textContent=l;
     d.onclick=()=>{document.getElementById('fleague').value=l;setView('players');renderPlayers();};
     nav.appendChild(d);
   });
@@ -196,36 +259,44 @@ function renderPlayers(){
   document.getElementById('player-count').textContent=list.length.toLocaleString()+' hráčů';
 
   if(!list.length){
-    document.getElementById('pgrid').innerHTML='<div class="empty" style="grid-column:1/-1"><h3>Žádní hráči</h3><p>Zkus jiný filtr</p></div>';
+    document.getElementById('pgrid').innerHTML='<div class="empty" style="grid-column:1/-1"><h3>Žádní hráči nenalezeni</h3><p>Zkus jiný filtr nebo hledání</p></div>';
     return;
   }
 
   document.getElementById('pgrid').innerHTML=list.slice(0,200).map(p=>{
     const col=PC[p.position]||'#888';
-    const inC=compareList.some(c=>c.id===p.id&&c.teamId===p.teamId);
+    const inC=compareList.some(c=>c.id==p.id&&c.teamId==p.teamId);
+    const f=flag(p.nationality);
     return`<div class="card${inC?' pinned':''}" onclick="openPlayer(${JSON.stringify(p.id)},${JSON.stringify(p.teamId)})">
       <div class="card-top">
-        <div class="av" style="background:${col}22;color:${col}">${ini(p.name)}</div>
-        <div><div class="pname">${p.name}</div><div class="pteam">${p.teamName||'—'}</div></div>
-        ${inC?'<span style="color:var(--accent);margin-left:auto">★</span>':''}
+        <div class="av" style="background:${col}18;color:${col}">${ini(p.name)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="pname">${p.name}</div>
+          <div class="pteam">${p.teamName||'—'}</div>
+        </div>
+        ${inC?'<span style="color:var(--accent);font-size:16px">★</span>':''}
       </div>
       <div class="card-info">
         <div class="ci"><div class="ci-lbl">Pozice</div><div class="ci-val"><span class="badge bp">${PCS[p.position]||'—'}</span></div></div>
         <div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">${p.age||'—'}</div></div>
-        <div class="ci"><div class="ci-lbl">Národnost</div><div class="ci-val" style="font-size:11px">${p.nationality||'—'}</div></div>
-        <div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">${p.height||'—'}</div></div>
+        <div class="ci"><div class="ci-lbl">Národnost</div><div class="ci-val" style="font-size:11px">${f} ${p.nationality||'—'}</div></div>
+        <div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">${p.height?p.height+' cm':'—'}</div></div>
       </div>
-      <div class="card-league">${p.leagueName||''}</div>
+      <div class="card-league"><span class="league-dot"></span>${p.leagueName||''}</div>
     </div>`;
   }).join('');
+
+  if(list.length>200){
+    document.getElementById('pgrid').insertAdjacentHTML('beforeend',`<div class="empty" style="grid-column:1/-1;padding:20px 0"><p style="font-size:13px;color:var(--muted)">Zobrazeno 200 z ${list.length} — zpřesni filtr pro více výsledků</p></div>`);
+  }
 }
 
-function openPlayer(id, teamId){
+function openPlayer(id,teamId){
   current=players.find(p=>p.id==id&&p.teamId==teamId)||players.find(p=>p.id==id);
   if(!current)return;
-  const p=current, col=PC[p.position]||'#888';
+  const p=current,col=PC[p.position]||'#888';
   document.getElementById('m-av').textContent=ini(p.name);
-  document.getElementById('m-av').style.cssText=`width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0;background:${col}22;color:${col}`;
+  document.getElementById('m-av').style.cssText=`width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0;background:${col}18;color:${col};border:2px solid ${col}30`;
   document.getElementById('m-name').textContent=p.name;
   document.getElementById('m-sub').textContent=`${p.teamName||'—'} · ${p.leagueName||'—'}`;
   const inC=compareList.some(c=>c.id==p.id&&c.teamId==p.teamId);
@@ -233,20 +304,19 @@ function openPlayer(id, teamId){
   btn.textContent=inC?'✓ Odebrat ze srovnání':'+ Přidat do srovnání';
   btn.className='btn'+(inC?'':' primary');
   btn.onclick=()=>toggleCmp(p.id,p.teamId);
+  const f=flag(p.nationality);
   document.getElementById('m-body').innerHTML=`
-    <div class="photo-wrap">${p.photo?`<img src="${p.photo}" class="player-photo" onerror="this.src=''" alt="">`:''}
+    <div class="photo-wrap">${p.photo?`<img src="${p.photo}" class="player-photo" onerror="this.style.display='none'" alt="">`:''}
     </div>
     <div class="igrid">
       <div class="icell"><div class="ilbl">Pozice</div><div class="ival">${PCZK[p.position]||p.position||'—'}</div></div>
-      <div class="icell"><div class="ilbl">Věk</div><div class="ival">${p.age||'—'}</div></div>
-      <div class="icell"><div class="ilbl">Národnost</div><div class="ival">${p.nationality||'—'}</div></div>
-      <div class="icell"><div class="ilbl">Výška</div><div class="ival">${p.height||'—'}</div></div>
-      <div class="icell"><div class="ilbl">Váha</div><div class="ival">${p.weight||'—'}</div></div>
-      <div class="icell"><div class="ilbl">Sezóna</div><div class="ival">${p.season||'—'}</div></div>
+      <div class="icell"><div class="ilbl">Věk</div><div class="ival">${p.age||'—'} let</div></div>
+      <div class="icell"><div class="ilbl">Národnost</div><div class="ival">${f} ${p.nationality||'—'}</div></div>
+      <div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">${p.height?p.height+' cm':'—'} ${p.weight?'/ '+p.weight+' kg':''}</div></div>
       <div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival">${p.teamName||'—'}</div></div>
-      <div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga</div><div class="ival">${p.leagueName||'—'}</div></div>
+      <div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival">${p.leagueName||'—'} · ${p.season||'—'}</div></div>
     </div>
-    <div class="no-stats">⚠ Statistiky (góly, rating, radar) budou dostupné po přechodu na placený plán API-Football.</div>
+    <div class="no-stats">📊 Statistiky (góly, asistence, minuty, rating a radar grafy) budou dostupné po přechodu na placený plán API-Football ($19/měsíc).</div>
   `;
   document.getElementById('overlay').style.display='flex';
 }
@@ -259,31 +329,41 @@ function toggleCmp(id,teamId){
   if(compareList.some(c=>c.id==id&&c.teamId==teamId)){compareList=compareList.filter(c=>!(c.id==id&&c.teamId==teamId));}
   else if(compareList.length<2){compareList.push(p);}
   else{compareList=[compareList[1],p];}
-  renderPlayers();
-  renderCompare();
+  renderPlayers();renderCompare();
   if(current&&current.id==id)openPlayer(id,teamId);
 }
 
 function renderCompare(){
   const el=document.getElementById('cmp-content');
-  if(compareList.length<2){el.innerHTML='<div class="empty"><h3>Vyber 2 hráče</h3><p>Klikni na hráče → přidat do srovnání</p></div>';return;}
+  if(compareList.length<2){el.innerHTML='<div class="empty"><h3>Vyber 2 hráče</h3><p>Klikni na hráče a přidej je do srovnání</p></div>';return;}
   const [a,b]=compareList;
   el.innerHTML=`<div class="cmp-grid">${[a,b].map(p=>{
     const col=PC[p.position]||'#888';
+    const f=flag(p.nationality);
     return`<div class="cmp-card">
-      <div style="width:50px;height:50px;border-radius:50%;background:${col}22;color:${col};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;margin:0 auto 10px">${ini(p.name)}</div>
-      <div style="font-size:14px;font-weight:700">${p.name}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">${PCZK[p.position]||'—'}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">${p.teamName}</div>
-      <div style="font-size:11px;color:var(--muted)margin-top:2px">${p.leagueName}</div>
-      <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">
-        <div style="background:var(--s2);border-radius:var(--r-sm);padding:6px 10px;display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--muted)">Věk</span><span style="font-size:12px;font-weight:500">${p.age||'—'}</span></div>
-        <div style="background:var(--s2);border-radius:var(--r-sm);padding:6px 10px;display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--muted)">Výška</span><span style="font-size:12px;font-weight:500">${p.height||'—'}</span></div>
-        <div style="background:var(--s2);border-radius:var(--r-sm);padding:6px 10px;display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--muted)">Národnost</span><span style="font-size:12px;font-weight:500">${p.nationality||'—'}</span></div>
+      <div style="width:52px;height:52px;border-radius:50%;background:${col}18;color:${col};border:2px solid ${col}30;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;margin:0 auto 12px">${ini(p.name)}</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)">${p.name}</div>
+      <div style="margin-top:4px"><span class="badge bp">${PCS[p.position]||'—'}</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">${p.teamName}</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:2px">${p.leagueName}</div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 12px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:var(--muted);font-weight:500">Věk</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text)">${p.age||'—'}</span>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 12px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:var(--muted);font-weight:500">Výška</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text)">${p.height?p.height+' cm':'—'}</span>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 12px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:var(--muted);font-weight:500">Národnost</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text)">${f} ${p.nationality||'—'}</span>
+        </div>
       </div>
-      <button class="btn" style="margin-top:10px" onclick="toggleCmp(${p.id},'${p.teamId}')">Odebrat</button>
+      <button class="btn" style="margin-top:12px" onclick="toggleCmp(${p.id},'${p.teamId}')">Odebrat</button>
     </div>`;
-  }).join('')}</div>`;
+  }).join('')}
+  </div>`;
 }
 
 function setView(v){
