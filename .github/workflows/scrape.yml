@@ -5,6 +5,7 @@ on:
     - cron: '0 3 * * 2'   # Úterý — hráči + zápasy
     - cron: '0 3 * * 5'   # Pátek — hráči + zápasy
     - cron: '0 4 * * 1'   # Pondělí — jen zápasy (po víkendu)
+    - cron: '0 2 1 * *'   # 1. každého měsíce — Transfermarkt
   workflow_dispatch:
     inputs:
       mode:
@@ -16,6 +17,7 @@ on:
           - all
           - players
           - matches
+          - transfermarkt
       days_back:
         description: 'Kolik dní zpět (0 = celá sezóna, výchozí 14)'
         required: false
@@ -50,23 +52,13 @@ jobs:
         run: pip install requests
 
       - name: Scrape players
-        if: ${{ github.event.inputs.mode != 'matches' }}
+        if: ${{ github.event.inputs.mode != 'matches' && github.event.inputs.mode != 'transfermarkt' }}
         run: python scraper.py
         env:
           APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
 
-      - name: Commit player data
-        if: ${{ github.event.inputs.mode != 'matches' }}
-        run: |
-          git config user.name "FMScouts Bot"
-          git config user.email "bot@fmscouts.com"
-          git add data/players.json
-          git add data/players.json
-          git diff --staged --quiet || git commit -m "Players update $(date +'%Y-%m-%d %H:%M')"
-          git push
-
       - name: Scrape matches
-        if: ${{ github.event.inputs.mode != 'players' }}
+        if: ${{ github.event.inputs.mode != 'players' && github.event.inputs.mode != 'transfermarkt' }}
         run: python scraper_matches.py
         env:
           APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
@@ -74,3 +66,15 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           DAYS_BACK: ${{ github.event.inputs.days_back || '14' }}
           LEAGUES_MODE: ${{ github.event.inputs.leagues_mode || 'all' }}
+
+      - name: Scrape Transfermarkt
+        if: ${{ github.event.inputs.mode == 'transfermarkt' || github.event.schedule == '0 2 1 * *' }}
+        run: python scraper_transfermarkt.py
+
+      - name: Commit data
+        run: |
+          git config user.name "FMScouts Bot"
+          git config user.email "bot@fmscouts.com"
+          git add data/players.json data/tm_data.json || true
+          git diff --staged --quiet || git commit -m "Data update $(date +'%Y-%m-%d %H:%M')"
+          git push
