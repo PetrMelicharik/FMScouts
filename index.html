@@ -370,6 +370,7 @@ var FL={
   Uganda:'ug',Tanzania:'tz',Zimbabwe:'zw',Zambia:'zm'
 };
 
+function tm(p){return tmData[String(p.id)]||{};}
 function ini(n){return(n||'??').split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0]||'?';}).join('').toUpperCase();}
 function flag(nat){var c=FL[nat];return c?'<img src="https://flagcdn.com/16x12/'+c+'.png" width="16" height="12" style="border-radius:2px;vertical-align:middle;margin-right:3px" alt="">'  :'';}
 function ll(p){var n=LN[p.leagueId]||p.leagueName||'';var c=CN[p.country]||'';return c?n+' ('+c+')':n;}
@@ -399,9 +400,13 @@ function makeAv(url,col,name,size){
 }
 
 function loadData(){
-  fetch('data/players.json?t='+Date.now())
-    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
-    .then(function(d){
+  var tmData={};
+  Promise.all([
+    fetch('data/players.json?t='+Date.now()).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}),
+    fetch('data/tm_data.json?t='+Date.now()).then(function(r){return r.ok?r.json():{};}).catch(function(){return {};})
+  ]).then(function(results){
+      var d=results[0];
+      tmData=results[1]||{};
       players=d.players||[];
       if(d.meta&&d.meta.lastUpdated) document.getElementById('last-updated').textContent=new Date(d.meta.lastUpdated).toLocaleDateString('cs-CZ');
       document.getElementById('data-stats').textContent=players.length.toLocaleString()+' hráčů';
@@ -533,6 +538,9 @@ function openPlayer(id,teamId){
     +'<div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">'+(p.height?p.height+' cm':'—')+(p.weight?' / '+p.weight+' kg':'')+'</div></div>'
     +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival">'+(p.teamName||'—')+'</div></div>'
     +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival">'+ll(p)+' · '+(p.season||'—')+'</div></div>'
+    +(tm(p).position?'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Přesná pozice</div><div class="ival">'+tm(p).position+'</div></div>':'')
+    +(tm(p).marketValue?'<div class="icell"><div class="ilbl">Tržní hodnota</div><div class="ival" style="color:var(--green-dark);font-weight:800">'+tm(p).marketValue+'</div></div>':'')
+    +(tm(p).contractUntil?'<div class="icell"><div class="ilbl">Smlouva do</div><div class="ival">'+tm(p).contractUntil+'</div></div>':'')
     +'</div>';
 
   if(p.appearances!=null){
