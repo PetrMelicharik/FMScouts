@@ -589,6 +589,9 @@ function openPlayer(id,teamId){
     body+='<div class="no-stats">📊 Statistiky pro tohoto hráče nejsou dostupné.</div>';
   }
 
+  if(hasPizza) {
+    body += buildPizzaChart(p);
+  }
   document.getElementById('m-body').innerHTML=body;
   document.getElementById('overlay').style.display='flex';
 
@@ -597,6 +600,192 @@ function openPlayer(id,teamId){
   formContainer.id = 'm-form';
   document.getElementById('m-body').appendChild(formContainer);
   loadPlayerForm(p.id, formContainer);
+}
+
+
+// ── Pizza Chart ───────────────────────────────────────────────────────────────
+
+var PIZZA_STATS = {
+  Attacker: [
+    {key:'goals',      label:'Góly',           group:'attacking', color:'#e63946'},
+    {key:'shots',      label:'Střely',         group:'attacking', color:'#e63946'},
+    {key:'shotsOnTarget', label:'Střely na br.',group:'attacking', color:'#e63946'},
+    {key:'dribbles',   label:'Driblinky',      group:'attacking', color:'#f4a261'},
+    {key:'dribblesWon',label:'Dribl. úsp.',    group:'attacking', color:'#f4a261'},
+    {key:'assists',    label:'Asistence',      group:'creation',  color:'#2a9d8f'},
+    {key:'keyPasses',  label:'Klíč. přihr.',   group:'creation',  color:'#2a9d8f'},
+    {key:'passes',     label:'Přihrávky',      group:'creation',  color:'#2a9d8f'},
+    {key:'duels',      label:'Duely',          group:'physical',  color:'#457b9d'},
+    {key:'duelsWon',   label:'Duely vyhr.',    group:'physical',  color:'#457b9d'},
+    {key:'foulsCommitted', label:'Fauly',      group:'physical',  color:'#457b9d'},
+    {key:'yellowCards',label:'Žluté karty',    group:'discipline',color:'#e9c46a'},
+  ],
+  Midfielder: [
+    {key:'passes',     label:'Přihrávky',      group:'passing',   color:'#2a9d8f'},
+    {key:'keyPasses',  label:'Klíč. přihr.',   group:'passing',   color:'#2a9d8f'},
+    {key:'assists',    label:'Asistence',      group:'passing',   color:'#2a9d8f'},
+    {key:'dribbles',   label:'Driblinky',      group:'attacking', color:'#e63946'},
+    {key:'goals',      label:'Góly',           group:'attacking', color:'#e63946'},
+    {key:'shots',      label:'Střely',         group:'attacking', color:'#e63946'},
+    {key:'tackles',    label:'Souboje',        group:'defensive', color:'#457b9d'},
+    {key:'interceptions',label:'Přerušení',    group:'defensive', color:'#457b9d'},
+    {key:'duels',      label:'Duely',          group:'defensive', color:'#457b9d'},
+    {key:'duelsWon',   label:'Duely vyhr.',    group:'defensive', color:'#457b9d'},
+    {key:'blocks',     label:'Bloky',          group:'defensive', color:'#457b9d'},
+    {key:'foulsCommitted',label:'Fauly',       group:'discipline',color:'#e9c46a'},
+  ],
+  Defender: [
+    {key:'tackles',    label:'Souboje',        group:'defensive', color:'#457b9d'},
+    {key:'interceptions',label:'Přerušení',    group:'defensive', color:'#457b9d'},
+    {key:'blocks',     label:'Bloky',          group:'defensive', color:'#457b9d'},
+    {key:'duels',      label:'Duely',          group:'defensive', color:'#457b9d'},
+    {key:'duelsWon',   label:'Duely vyhr.',    group:'defensive', color:'#457b9d'},
+    {key:'passes',     label:'Přihrávky',      group:'passing',   color:'#2a9d8f'},
+    {key:'keyPasses',  label:'Klíč. přihr.',   group:'passing',   color:'#2a9d8f'},
+    {key:'dribbles',   label:'Driblinky',      group:'attacking', color:'#e63946'},
+    {key:'assists',    label:'Asistence',      group:'attacking', color:'#e63946'},
+    {key:'foulsCommitted',label:'Fauly',       group:'discipline',color:'#e9c46a'},
+    {key:'yellowCards',label:'Žluté karty',    group:'discipline',color:'#e9c46a'},
+  ],
+  Goalkeeper: [
+    {key:'passes',     label:'Přihrávky',      group:'passing',   color:'#2a9d8f'},
+    {key:'keyPasses',  label:'Klíč. přihr.',   group:'passing',   color:'#2a9d8f'},
+    {key:'duels',      label:'Duely',          group:'physical',  color:'#457b9d'},
+    {key:'duelsWon',   label:'Duely vyhr.',    group:'physical',  color:'#457b9d'},
+    {key:'foulsCommitted',label:'Fauly',       group:'discipline',color:'#e9c46a'},
+  ],
+};
+
+function calcPer90(p, key) {
+  var mins = p.minutesPlayed || 0;
+  if(mins < 1) return 0;
+  return ((p[key] || 0) / mins) * 90;
+}
+
+function calcPercentile(value, values) {
+  if(!values.length) return 0;
+  var below = values.filter(function(v){ return v <= value; }).length;
+  return Math.round((below / values.length) * 100);
+}
+
+function buildPizzaChart(p) {
+  var cat = playerCat(p) || p.position || 'Midfielder';
+  var statDefs = PIZZA_STATS[cat] || PIZZA_STATS['Midfielder'];
+
+  // TM skupiny pro porovnání
+  var TM_GROUP = {
+    'Centre-Forward':'Útočníci','Second Striker':'Útočníci',
+    'Left Winger':'Křídla','Right Winger':'Křídla',
+    'Attacking Midfield':'Ofenz. záložníci',
+    'Central Midfield':'Centr. záložníci','Defensive Midfield':'Centr. záložníci',
+    'Left Midfield':'Křídla','Right Midfield':'Křídla',
+    'Left-Back':'Kraj. obránci','Right-Back':'Kraj. obránci',
+    'Centre-Back':'Stopeři',
+    'Goalkeeper':'Brankáři',
+  };
+
+  function tmGroup(q) {
+    var tmPos = tm(q).position;
+    if(tmPos && TM_GROUP[tmPos]) return TM_GROUP[tmPos];
+    // Fallback na API-Football kategorie
+    return playerCat(q) || q.position || '';
+  }
+
+  var myGroup = tmGroup(p);
+
+  // Najdi hráče stejné TM skupiny a ligy pro percentily
+  var peers = players.filter(function(q) {
+    return tmGroup(q) === myGroup &&
+           q.leagueId === p.leagueId &&
+           (q.minutesPlayed || 0) >= 450 &&
+           q.id !== p.id;
+  });
+
+  var W = 500, H = 500, CX = W/2, CY = H/2;
+  var R_MAX = 180, R_MIN = 40, R_LABEL = 200;
+  var n = statDefs.length;
+  var angleStep = (2 * Math.PI) / n;
+  var startAngle = -Math.PI / 2;
+
+  // Spočítej percentily
+  var slices = statDefs.map(function(stat, i) {
+    var val = calcPer90(p, stat.key);
+    var peerVals = peers.map(function(q){ return calcPer90(q, stat.key); });
+    var pct = calcPercentile(val, peerVals);
+    var angle = startAngle + i * angleStep;
+    return { stat: stat, val: val, pct: pct, angle: angle };
+  });
+
+  var svg = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:500px;display:block;margin:0 auto">';
+
+  // Kruhové mřížky
+  [20,40,60,80,100].forEach(function(pct) {
+    var r = R_MIN + (R_MAX - R_MIN) * pct / 100;
+    svg += '<circle cx="'+CX+'" cy="'+CY+'" r="'+r+'" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>';
+    svg += '<text x="'+(CX+4)+'" y="'+(CY-r+4)+'" font-size="8" fill="#aaa">'+pct+'</text>';
+  });
+
+  // Paprsky
+  slices.forEach(function(s) {
+    var x2 = CX + R_MAX * Math.cos(s.angle);
+    var y2 = CY + R_MAX * Math.sin(s.angle);
+    svg += '<line x1="'+CX+'" y1="'+CY+'" x2="'+x2+'" y2="'+y2+'" stroke="#e0e0e0" stroke-width="0.5"/>';
+  });
+
+  // Plátky
+  slices.forEach(function(s, i) {
+    var r = R_MIN + (R_MAX - R_MIN) * s.pct / 100;
+    var a1 = s.angle - angleStep/2 + 0.03;
+    var a2 = s.angle + angleStep/2 - 0.03;
+    var x1 = CX + r * Math.cos(a1);
+    var y1 = CY + r * Math.sin(a1);
+    var x2 = CX + r * Math.cos(a2);
+    var y2 = CY + r * Math.sin(a2);
+    var col = s.stat.color;
+    var alpha = Math.max(0.3, s.pct/100 * 0.85 + 0.15);
+    svg += '<path d="M '+CX+' '+CY+' L '+x1+' '+y1+' A '+r+' '+r+' 0 0 1 '+x2+' '+y2+' Z"'
+         + ' fill="'+col+'" fill-opacity="'+alpha.toFixed(2)+'" stroke="'+col+'" stroke-width="1" stroke-opacity="0.6"/>';
+
+    // Percentil label uvnitř plátku
+    if(s.pct > 5) {
+      var rLabel = R_MIN + (R_MAX - R_MIN) * s.pct / 100 - 10;
+      if(rLabel < R_MIN + 5) rLabel = R_MIN + 10;
+      var lx = CX + rLabel * Math.cos(s.angle);
+      var ly = CY + rLabel * Math.sin(s.angle);
+      svg += '<text x="'+lx.toFixed(1)+'" y="'+(ly+3).toFixed(1)+'" text-anchor="middle" font-size="8" font-weight="700" fill="white">'+s.pct+'</text>';
+    }
+
+    // Label statistiky na okraji
+    var lx = CX + R_LABEL * Math.cos(s.angle);
+    var ly = CY + R_LABEL * Math.sin(s.angle);
+    var anchor = Math.cos(s.angle) > 0.1 ? 'start' : Math.cos(s.angle) < -0.1 ? 'end' : 'middle';
+    var fontSize = 9;
+    svg += '<text x="'+lx.toFixed(1)+'" y="'+(ly+3).toFixed(1)+'" text-anchor="'+anchor+'" font-size="'+fontSize+'" fill="#555" font-weight="500">'+s.stat.label+'</text>';
+
+    // Per90 hodnota pod labelem
+    var per90str = s.val < 0.01 ? '0' : s.val.toFixed(2);
+    svg += '<text x="'+lx.toFixed(1)+'" y="'+(ly+13).toFixed(1)+'" text-anchor="'+anchor+'" font-size="8" fill="'+s.stat.color+'">'+per90str+'/90</text>';
+  });
+
+  // Střed — bílý kruh
+  svg += '<circle cx="'+CX+'" cy="'+CY+'" r="'+R_MIN+'" fill="white" stroke="#eee" stroke-width="1"/>';
+  svg += '<text x="'+CX+'" y="'+(CY-6)+'" text-anchor="middle" font-size="9" fill="#888">'+myGroup+'</text>';
+  svg += '<text x="'+CX+'" y="'+(CY+6)+'" text-anchor="middle" font-size="8" fill="#aaa">'+peers.length+' hráčů</text>';
+
+  svg += '</svg>';
+
+  // Legenda skupin
+  var groups = {};
+  statDefs.forEach(function(s){ groups[s.group] = s.color; });
+  var legend = '<div style="display:flex;gap:12px;justify-content:center;margin-top:8px;flex-wrap:wrap">';
+  Object.keys(groups).forEach(function(g) {
+    legend += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#555">'
+      + '<div style="width:10px;height:10px;border-radius:50%;background:'+groups[g]+'"></div>'+g+'</div>';
+  });
+  legend += '</div>';
+
+  return '<div class="sbox" style="margin-top:0"><div class="sbox-title">Pizza chart — percentily v lize (per 90 min)</div>'
+    + svg + legend + '</div>';
 }
 
 function closeModal(){document.getElementById('overlay').style.display='none';}
