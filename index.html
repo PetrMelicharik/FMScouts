@@ -676,7 +676,7 @@ function buildPizzaChart(p) {
   var TM_GROUP = {
     'Centre-Forward':'Útočníci','Second Striker':'Útočníci',
     'Left Winger':'Křídla','Right Winger':'Křídla',
-    'Attacking Midfield':'Centr. záložníci',
+    'Attacking Midfield':'Ofenz. záložníci',
     'Central Midfield':'Centr. záložníci','Defensive Midfield':'Centr. záložníci',
     'Left Midfield':'Křídla','Right Midfield':'Křídla',
     'Left-Back':'Kraj. obránci','Right-Back':'Kraj. obránci',
@@ -697,7 +697,7 @@ function buildPizzaChart(p) {
   var peers = players.filter(function(q) {
     return tmGroup(q) === myGroup &&
            q.leagueId === p.leagueId &&
-           (q.minutesPlayed || 0) >= 450 &&
+           (q.minutesPlayed || 0) >= 400 &&
            q.id !== p.id;
   });
 
