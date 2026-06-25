@@ -589,7 +589,7 @@ function openPlayer(id,teamId){
     body+='<div class="no-stats">📊 Statistiky pro tohoto hráče nejsou dostupné.</div>';
   }
 
-  if(hasPizza) {
+  if(p.appearances != null && (p.minutesPlayed||0) >= 90 && playerCat(p) !== 'Goalkeeper') {
     body += buildPizzaChart(p);
   }
   document.getElementById('m-body').innerHTML=body;
