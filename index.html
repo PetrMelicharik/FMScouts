@@ -672,7 +672,7 @@ function renderTow(){
     var info=document.createElement('div');
     info.style.cssText='flex:1;min-width:0';
     info.innerHTML='<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
-      +'<div style="font-size:11px;color:var(--muted);margin-top:1px"><span class="badge bp" style="font-size:9px;padding:1px 5px">'+(PCS[p.position]||'—')+'</span> '+p.teamName+' · '+ll(p)+'</div>';
+      +'<div style="font-size:11px;color:var(--muted);margin-top:1px"><span class="badge bp" style="font-size:9px;padding:1px 5px">'+(tm(p).position||PCS[p.position]||'—')+'</span> '+p.teamName+' · '+ll(p)+'</div>';
     row.appendChild(info);
     var val=towCat==='rating'?parseFloat(p.rating):p[cat.field]||0;
     var valEl=document.createElement('div');
