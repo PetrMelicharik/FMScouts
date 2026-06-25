@@ -676,7 +676,7 @@ function buildPizzaChart(p) {
   var TM_GROUP = {
     'Centre-Forward':'Útočníci','Second Striker':'Útočníci',
     'Left Winger':'Křídla','Right Winger':'Křídla',
-    'Attacking Midfield':'Ofenz. záložníci',
+    'Attacking Midfield':'Centr. záložníci',
     'Central Midfield':'Centr. záložníci','Defensive Midfield':'Centr. záložníci',
     'Left Midfield':'Křídla','Right Midfield':'Křídla',
     'Left-Back':'Kraj. obránci','Right-Back':'Kraj. obránci',
@@ -716,71 +716,75 @@ function buildPizzaChart(p) {
     return { stat: stat, val: val, pct: pct, angle: angle };
   });
 
-  var svg = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:500px;display:block;margin:0 auto">';
+  var svg = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:0 auto">';
+
+  // Pozadí
+  svg += '<rect width="'+W+'" height="'+H+'" fill="#fafafa" rx="12"/>';
 
   // Kruhové mřížky
-  [20,40,60,80,100].forEach(function(pct) {
+  [25,50,75,100].forEach(function(pct) {
     var r = R_MIN + (R_MAX - R_MIN) * pct / 100;
-    svg += '<circle cx="'+CX+'" cy="'+CY+'" r="'+r+'" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>';
-    svg += '<text x="'+(CX+4)+'" y="'+(CY-r+4)+'" font-size="8" fill="#aaa">'+pct+'</text>';
+    svg += '<circle cx="'+CX+'" cy="'+CY+'" r="'+r+'" fill="none" stroke="#e8e8e8" stroke-width="1" stroke-dasharray="3,3"/>';
   });
 
   // Paprsky
   slices.forEach(function(s) {
     var x2 = CX + R_MAX * Math.cos(s.angle);
     var y2 = CY + R_MAX * Math.sin(s.angle);
-    svg += '<line x1="'+CX+'" y1="'+CY+'" x2="'+x2+'" y2="'+y2+'" stroke="#e0e0e0" stroke-width="0.5"/>';
+    svg += '<line x1="'+CX+'" y1="'+CY+'" x2="'+x2+'" y2="'+y2+'" stroke="#e8e8e8" stroke-width="1"/>';
   });
 
   // Plátky
-  slices.forEach(function(s, i) {
+  slices.forEach(function(s) {
     var r = R_MIN + (R_MAX - R_MIN) * s.pct / 100;
-    var a1 = s.angle - angleStep/2 + 0.03;
-    var a2 = s.angle + angleStep/2 - 0.03;
+    var a1 = s.angle - angleStep/2 + 0.04;
+    var a2 = s.angle + angleStep/2 - 0.04;
     var x1 = CX + r * Math.cos(a1);
     var y1 = CY + r * Math.sin(a1);
     var x2 = CX + r * Math.cos(a2);
     var y2 = CY + r * Math.sin(a2);
     var col = s.stat.color;
-    var alpha = Math.max(0.3, s.pct/100 * 0.85 + 0.15);
+    // Barva závisí na percentilu — tmavší = lepší
+    var alpha = 0.2 + (s.pct/100) * 0.75;
     svg += '<path d="M '+CX+' '+CY+' L '+x1+' '+y1+' A '+r+' '+r+' 0 0 1 '+x2+' '+y2+' Z"'
-         + ' fill="'+col+'" fill-opacity="'+alpha.toFixed(2)+'" stroke="'+col+'" stroke-width="1" stroke-opacity="0.6"/>';
+         + ' fill="'+col+'" fill-opacity="'+alpha.toFixed(2)+'"'
+         + ' stroke="white" stroke-width="1.5"/>';
 
-    // Percentil label uvnitř plátku
-    if(s.pct > 5) {
-      var rLabel = R_MIN + (R_MAX - R_MIN) * s.pct / 100 - 10;
-      if(rLabel < R_MIN + 5) rLabel = R_MIN + 10;
+    // Percentil label uvnitř — jen pokud je dost místa
+    if(s.pct > 12) {
+      var rLabel = R_MIN + (R_MAX - R_MIN) * s.pct / 100 * 0.6 + R_MIN * 0.3;
       var lx = CX + rLabel * Math.cos(s.angle);
       var ly = CY + rLabel * Math.sin(s.angle);
-      svg += '<text x="'+lx.toFixed(1)+'" y="'+(ly+3).toFixed(1)+'" text-anchor="middle" font-size="8" font-weight="700" fill="white">'+s.pct+'</text>';
+      svg += '<text x="'+lx.toFixed(1)+'" y="'+(ly+3.5).toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="800" fill="white" style="text-shadow:0 1px 2px rgba(0,0,0,0.3)">'+s.pct+'</text>';
     }
 
-    // Label statistiky na okraji
+    // Label statistiky + per90 na okraji
     var lx = CX + R_LABEL * Math.cos(s.angle);
     var ly = CY + R_LABEL * Math.sin(s.angle);
-    var anchor = Math.cos(s.angle) > 0.1 ? 'start' : Math.cos(s.angle) < -0.1 ? 'end' : 'middle';
-    var fontSize = 9;
-    svg += '<text x="'+lx.toFixed(1)+'" y="'+(ly+3).toFixed(1)+'" text-anchor="'+anchor+'" font-size="'+fontSize+'" fill="#555" font-weight="500">'+s.stat.label+'</text>';
+    var anchor = Math.cos(s.angle) > 0.15 ? 'start' : Math.cos(s.angle) < -0.15 ? 'end' : 'middle';
+    var per90str = s.val < 0.01 ? '0.00' : s.val.toFixed(2);
 
-    // Per90 hodnota pod labelem
-    var per90str = s.val < 0.01 ? '0' : s.val.toFixed(2);
-    svg += '<text x="'+lx.toFixed(1)+'" y="'+(ly+13).toFixed(1)+'" text-anchor="'+anchor+'" font-size="8" fill="'+s.stat.color+'">'+per90str+'/90</text>';
+    // Label box background pro lepší čitelnost
+    svg += '<text x="'+lx.toFixed(1)+'" y="'+(ly+2).toFixed(1)+'" text-anchor="'+anchor+'" font-size="10" font-weight="600" fill="#333">'+s.stat.label+'</text>';
+    svg += '<text x="'+lx.toFixed(1)+'" y="'+(ly+14).toFixed(1)+'" text-anchor="'+anchor+'" font-size="9" fill="'+col+'" font-weight="500">'+per90str+' /90</text>';
   });
 
-  // Střed — bílý kruh
-  svg += '<circle cx="'+CX+'" cy="'+CY+'" r="'+R_MIN+'" fill="white" stroke="#eee" stroke-width="1"/>';
-  svg += '<text x="'+CX+'" y="'+(CY-6)+'" text-anchor="middle" font-size="9" fill="#888">'+myGroup+'</text>';
-  svg += '<text x="'+CX+'" y="'+(CY+6)+'" text-anchor="middle" font-size="8" fill="#aaa">'+peers.length+' hráčů</text>';
+  // Střed — gradient kruh
+  svg += '<circle cx="'+CX+'" cy="'+CY+'" r="'+(R_MIN+2)+'" fill="white" stroke="#ddd" stroke-width="1.5"/>';
+  svg += '<text x="'+CX+'" y="'+(CY-8)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#444">'+myGroup+'</text>';
+  svg += '<text x="'+CX+'" y="'+(CY+5)+'" text-anchor="middle" font-size="8" fill="#888">'+peers.length+' hráčů</text>';
+  svg += '<text x="'+CX+'" y="'+(CY+16)+'" text-anchor="middle" font-size="7" fill="#aaa">v lize</text>';
 
   svg += '</svg>';
 
-  // Legenda skupin
+  // Legenda skupin — kompaktnější
   var groups = {};
+  var groupNames = {'attacking':'Útočné','passing':'Přihrávky','defensive':'Obranné','discipline':'Disciplína','creation':'Tvorba','physical':'Fyzické'};
   statDefs.forEach(function(s){ groups[s.group] = s.color; });
-  var legend = '<div style="display:flex;gap:12px;justify-content:center;margin-top:8px;flex-wrap:wrap">';
+  var legend = '<div style="display:flex;gap:16px;justify-content:center;margin-top:10px;flex-wrap:wrap;padding:0 8px">';
   Object.keys(groups).forEach(function(g) {
-    legend += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#555">'
-      + '<div style="width:10px;height:10px;border-radius:50%;background:'+groups[g]+'"></div>'+g+'</div>';
+    legend += '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#666;font-weight:500">'
+      + '<div style="width:12px;height:12px;border-radius:3px;background:'+groups[g]+'"></div>'+(groupNames[g]||g)+'</div>';
   });
   legend += '</div>';
 
