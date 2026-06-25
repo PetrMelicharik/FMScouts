@@ -371,6 +371,22 @@ var FL={
 };
 
 function tm(p){return tmData[String(p.id)]||{};}
+
+// Mapování TM pozic na API-Football kategorie
+var TM_CAT={
+  'Goalkeeper':'Goalkeeper',
+  'Centre-Back':'Defender','Left-Back':'Defender','Right-Back':'Defender',
+  'Left Midfield':'Midfielder','Right Midfield':'Midfielder',
+  'Central Midfield':'Midfielder','Defensive Midfield':'Midfielder',
+  'Attacking Midfield':'Midfielder',
+  'Left Winger':'Attacker','Right Winger':'Attacker',
+  'Centre-Forward':'Attacker','Second Striker':'Attacker',
+};
+function playerCat(p){
+  var tmPos=tm(p).position;
+  if(tmPos&&TM_CAT[tmPos]) return TM_CAT[tmPos];
+  return p.position||'';
+}
 function pos(p){return tm(p).position||PCS[p.position]||'—';}
 function posFull(p){return tm(p).position||(p.position?PCZK[p.position]||p.position:'—');}
 function ini(n){return(n||'??').split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0]||'?';}).join('').toUpperCase();}
@@ -436,7 +452,7 @@ function getList(){
   var ageMax=parseInt(document.getElementById('fage_max').value)||99;
   var list=players.filter(function(p){
     if(q){var s=(p.name+' '+(p.teamName||'')+' '+(p.nationality||'')).toLowerCase();if(s.indexOf(q)<0)return false;}
-    if(pos&&p.position!==pos)return false;
+    if(pos&&playerCat(p)!==pos)return false;
     if(league&&p.leagueName!==league)return false;
     if(ageMin>0&&(p.age||0)<ageMin)return false;
     if(ageMax<99&&(p.age||99)>ageMax)return false;
@@ -641,7 +657,7 @@ function renderTow(){
 
   var list=players.filter(function(p){
     if(league&&p.leagueName!==league)return false;
-    if(pos&&p.position!==pos)return false;
+    if(pos&&playerCat(p)!==pos)return false;
     if(towCat==='rating')return parseFloat(p.rating)&&(p.appearances||0)>=5;
     if(towCat==='points')return ((p.goals||0)+(p.assists||0))>=cat.min;
     return (p[cat.field]||0)>=cat.min;
