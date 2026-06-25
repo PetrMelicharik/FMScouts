@@ -508,7 +508,7 @@ function renderPlayers(){
     var info=document.createElement('div');
     info.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px';
     info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(p.age||'—')+'</div></div>'
-      +'<div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">'+(p.height?p.height+' cm':'—')+'</div></div>'
+      +'<div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">'+(p.height?p.height:'—')+'</div></div>'
       +'<div class="ci" style="grid-column:1/-1"><div class="ci-lbl">Národnost</div><div class="ci-val">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
       +(p.appearances!=null
         ?'<div class="ci"><div class="ci-lbl">Góly/Ass</div><div class="ci-val" style="color:#16a34a;font-weight:700">'+(p.goals||0)+'/'+(p.assists||0)+'</div></div>'
@@ -553,7 +553,7 @@ function openPlayer(id,teamId){
     +'<div class="icell"><div class="ilbl">Pozice</div><div class="ival">'+(tm(p).position||(PCZK[p.position]||'—'))+'</div></div>'
     +'<div class="icell"><div class="ilbl">Věk</div><div class="ival">'+(p.age||'—')+' let</div></div>'
     +'<div class="icell"><div class="ilbl">Národnost</div><div class="ival">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
-    +'<div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">'+(p.height?p.height+' cm':'—')+(p.weight?' / '+p.weight+' kg':'')+'</div></div>'
+    +'<div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">'+(p.height?p.height:'—')+(p.weight?' / '+p.weight:'')+'</div></div>'
     +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival">'+(p.teamName||'—')+'</div></div>'
     +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival">'+ll(p)+' · '+(p.season||'—')+'</div></div>'
 
