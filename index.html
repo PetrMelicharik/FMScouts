@@ -129,6 +129,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     Top hráči
   </button>
+  <button class="nav-btn" id="nv-weekend" onclick="setView('weekend')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Hráč víkendu
+  </button>
   <button class="nav-btn" id="nv-compare" onclick="setView('compare')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
     Srovnání
@@ -205,6 +209,24 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <button class="tow-cat" onclick="setTowCat('foulsCommitted')">🚫 Fauly</button>
     </div>
     <div id="tow-list"></div>
+  </div>
+
+  <div class="view" id="view-weekend">
+    <div class="page-title">Hráč víkendu</div>
+    <div class="page-sub">Top 20 hráčů dle ratingu v posledních 7 dnech</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <select class="inp" id="weekend-league" onchange="renderWeekend()">
+        <option value="">Všechny ligy</option>
+      </select>
+      <select class="inp" id="weekend-pos" onchange="renderWeekend()">
+        <option value="">Všechny pozice</option>
+        <option value="Goalkeeper">Brankáři</option>
+        <option value="Defender">Obránci</option>
+        <option value="Midfielder">Záložníci</option>
+        <option value="Attacker">Útočníci</option>
+      </select>
+    </div>
+    <div id="weekend-list"><div class="empty"><h3>Načítám...</h3></div></div>
   </div>
 
   <div class="view" id="view-compare">
@@ -947,6 +969,82 @@ function renderCompare(){
   el.appendChild(metricsEl);
 }
 
+function renderWeekend(){
+  var leagueFilter = document.getElementById('weekend-league').value;
+  var posFilter = document.getElementById('weekend-pos').value;
+  var el = document.getElementById('weekend-list');
+  el.innerHTML = '<div class="empty"><h3>Načítám data...</h3></div>';
+
+  // Query Supabase — zápasy posledních 7 dní
+  var since = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+
+  sbGet('player_match_stats', {
+    'select': 'player_id,rating,goals,assists,minutes,team_name,league_id,matches!inner(match_date,home_team,away_team)',
+    'rating': 'not.is.null',
+    'matches.match_date': 'gte.'+since,
+    'order': 'rating.desc',
+    'limit': '200'
+  }).then(function(data){
+    if(!data||!data.length){
+      el.innerHTML='<div class="empty"><h3>Žádné zápasy</h3><p>Žádné zápasy za posledních 7 dní.</p></div>';
+      return;
+    }
+
+    // Najdi hráče v players pro extra info
+    var rows = data.map(function(d){
+      var pl = players.find(function(p){return p.id==d.player_id;});
+      return{d:d, pl:pl};
+    }).filter(function(r){
+      if(!r.pl) return false;
+      if(leagueFilter && r.pl.leagueName !== leagueFilter) return false;
+      if(posFilter && playerCat(r.pl) !== posFilter) return false;
+      return true;
+    }).slice(0,20);
+
+    if(!rows.length){
+      el.innerHTML='<div class="empty"><h3>Žádní hráči</h3><p>Zkus jiný filtr.</p></div>';
+      return;
+    }
+
+    el.innerHTML='';
+    rows.forEach(function(r,i){
+      var p=r.pl, d=r.d;
+      var col=PC[p.position]||'#3ab54a';
+      var rating=parseFloat(d.rating);
+      var match=d.matches;
+      var matchStr=match?match.home_team+' vs '+match.away_team:'—';
+      var dateStr=match&&match.match_date?new Date(match.match_date).toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric'}):'';
+      var rankClass=i===0?'g':i===1?'s':i===2?'b':'';
+
+      var row=document.createElement('div');
+      row.className='tow-row';
+      row.onclick=function(){openPlayer(p.id,p.teamId);};
+      row.innerHTML='<div class="tow-rank '+rankClass+'">'+(i+1)+'</div>';
+      row.appendChild(makeAv(p.photo,col,p.name,36));
+
+      var info=document.createElement('div');
+      info.style.cssText='flex:1;min-width:0';
+      info.innerHTML='<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:1px">'
+        +'<span class="badge bp" style="font-size:9px;padding:1px 5px">'+(tm(p).position||PCS[p.position]||'—')+'</span>'
+        +' '+p.teamName+' · '+ll(p)+'</div>'
+        +'<div style="font-size:10px;color:var(--muted2);margin-top:2px">'+matchStr+(dateStr?' · '+dateStr:'')
+        +(d.goals?' · ⚽'+d.goals:'')+(d.assists?' · 🅰'+d.assists:'')
+        +(d.minutes?' · '+d.minutes+''':'')+'</div>';
+      row.appendChild(info);
+
+      var rEl=document.createElement('div');
+      rEl.style.cssText='text-align:right';
+      rEl.innerHTML='<div style="font-size:18px;font-weight:800;color:'+rc(rating)+'">'+rating.toFixed(2)+'</div>'
+        +'<div style="font-size:10px;color:var(--muted)">rating</div>';
+      row.appendChild(rEl);
+      el.appendChild(row);
+    });
+  }).catch(function(){
+    el.innerHTML='<div class="empty"><h3>Chyba načítání</h3><p>Nepodařilo se načíst data ze Supabase.</p></div>';
+  });
+}
+
 function setView(v){
   document.querySelectorAll('.view').forEach(function(e){e.classList.remove('active');});
   document.querySelectorAll('.nav-btn').forEach(function(e){e.classList.remove('active');});
@@ -954,6 +1052,7 @@ function setView(v){
   var nb=document.getElementById('nv-'+v);if(nb)nb.classList.add('active');
   if(v==='compare')renderCompare();
   if(v==='tow')renderTow();
+  if(v==='weekend')renderWeekend();
 }
 
 loadData();
