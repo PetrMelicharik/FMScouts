@@ -345,7 +345,7 @@ function loadPlayerForm(playerId, container) {
         + '<div style="font-size:18px;font-weight:800;color:'+col+';min-width:36px">'+r.toFixed(2)+'</div>'
         + '<div style="flex:1;min-width:0">'
         + '<div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+matchStr+'</div>'
-        + '<div style="font-size:10px;color:var(--muted)">'+dateStr+(d.goals?' · ⚽ '+d.goals:'')+(d.assists?' · 🅰 '+d.assists:'')+(d.minutes?' · '+d.minutes+'min':'')+'</div>'
+        + '<div style="font-size:10px;color:var(--muted)">'+dateStr+(d.goals?' · G:'+d.goals:'')+(d.assists?' · A:'+d.assists:'')+(d.minutes?' · '+d.minutes+'min':'')+'</div>'
         + '</div>'
         + '</div>';
     });
@@ -970,21 +970,26 @@ function renderCompare(){
 }
 
 function renderWeekend(){
-  var leagueFilter = document.getElementById('weekend-league').value;
-  var posFilter = document.getElementById('weekend-pos').value;
+  var leagueEl = document.getElementById('weekend-league');
+  var posEl = document.getElementById('weekend-pos');
+  var leagueFilter = leagueEl ? leagueEl.value : '';
+  var posFilter = posEl ? posEl.value : '';
   var el = document.getElementById('weekend-list');
+  if(!el) return;
   el.innerHTML = '<div class="empty"><h3>Načítám data...</h3></div>';
 
-  // Query Supabase — zápasy posledních 7 dní
   var since = new Date(Date.now() - 7*24*60*60*1000).toISOString();
 
-  sbGet('player_match_stats', {
-    'select': 'player_id,rating,goals,assists,minutes,team_name,league_id,matches!inner(match_date,home_team,away_team)',
-    'rating': 'not.is.null',
-    'matches.match_date': 'gte.'+since,
-    'order': 'rating.desc',
-    'limit': '200'
-  }).then(function(data){
+  // Použij přímý fetch pro složitější Supabase dotaz
+  var url = SUPABASE_URL+'/rest/v1/player_match_stats'
+    +'?select=player_id,rating,goals,assists,minutes,team_name,league_id,matches!inner(match_date,home_team,away_team)'
+    +'&rating=not.is.null'
+    +'&matches.match_date=gte.'+encodeURIComponent(since)
+    +'&order=rating.desc'
+    +'&limit=200';
+
+  fetch(url, {headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})
+    .then(function(r){return r.json();}).then(function(data){
     if(!data||!data.length){
       el.innerHTML='<div class="empty"><h3>Žádné zápasy</h3><p>Žádné zápasy za posledních 7 dní.</p></div>';
       return;
@@ -1029,7 +1034,7 @@ function renderWeekend(){
         +'<span class="badge bp" style="font-size:9px;padding:1px 5px">'+(tm(p).position||PCS[p.position]||'—')+'</span>'
         +' '+p.teamName+' · '+ll(p)+'</div>'
         +'<div style="font-size:10px;color:var(--muted2);margin-top:2px">'+matchStr+(dateStr?' · '+dateStr:'')
-        +(d.goals?' · ⚽'+d.goals:'')+(d.assists?' · 🅰'+d.assists:'')
+        +(d.goals?' · G:'+d.goals:'')+(d.assists?' · A:'+d.assists:'')
         +(d.minutes?' · '+d.minutes+'min':'')+'</div>';
       row.appendChild(info);
 
