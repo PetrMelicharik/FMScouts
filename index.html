@@ -1033,9 +1033,10 @@ function renderWeekend(){
         +'<div style="font-size:11px;color:var(--muted);margin-top:1px">'
         +'<span class="badge bp" style="font-size:9px;padding:1px 5px">'+(tm(p).position||PCS[p.position]||'—')+'</span>'
         +' '+p.teamName+' · '+ll(p)+'</div>'
-        +'<div style="font-size:10px;color:var(--muted2);margin-top:2px">'+matchStr+(dateStr?' · '+dateStr:'')
-        +(d.goals?' · G:'+d.goals:'')+(d.assists?' · A:'+d.assists:'')
-        +(d.minutes?' · '+d.minutes+'min':'')+'</div>';
+        +'<div style="font-size:12px;font-weight:600;color:var(--text);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+matchStr+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:1px">'+(dateStr?dateStr+' · ':'')
+        +(d.goals?'G:'+d.goals+' · ':'')+(d.assists?'A:'+d.assists+' · ':'')
+        +(d.minutes?d.minutes+'min':'')+'</div>';
       row.appendChild(info);
 
       var rEl=document.createElement('div');
