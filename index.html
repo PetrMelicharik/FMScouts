@@ -982,8 +982,7 @@ function buildComparePizza(a, b) {
   function p90(p,key){var m=p.minutesPlayed||0;if(m<1)return 0;return((p[key]||0)/m)*90;}
   function pct(val,vals){if(!vals.length)return 0;return Math.round(vals.filter(function(v){return v<=val;}).length/vals.length*100);}
 
-  // Větší viewBox — víc místa pro popisky
-  var W=600,H=600,CX=300,CY=300,R=170,R_LABEL=200;
+  var W=640,H=640,CX=320,CY=320,R=175,R_LABEL=210;
   var n=statDefs.length,step=(2*Math.PI)/n,startA=-Math.PI/2;
 
   var pctsA=statDefs.map(function(stat){
@@ -999,37 +998,27 @@ function buildComparePizza(a, b) {
   function polyPts(pcts){return pcts.map(function(p,i){var v=pt(R*p/100,i);return v[0].toFixed(1)+','+v[1].toFixed(1);}).join(' ');}
 
   var colA='#22c55e', colB='#3b82f6';
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:580px;display:block;margin:0 auto">';
 
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px;display:block;margin:0 auto">';
-
-  // Světlé pozadí
   svg+='<rect width="'+W+'" height="'+H+'" fill="#f8fafc" rx="16"/>';
+  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="'+(R+10)+'" fill="#1e293b" stroke="#334155" stroke-width="1"/>';
 
-  // Radar kruh
-  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="'+(R+8)+'" fill="#1e293b" stroke="#334155" stroke-width="1"/>';
-
-  // Mřížka — hexagonální prstence
+  // Grid
   [20,40,60,80,100].forEach(function(p){
     var r=R*p/100;
     var pts=statDefs.map(function(_,i){var v=pt(r,i);return v[0].toFixed(1)+','+v[1].toFixed(1);}).join(' ');
-    svg+='<polygon points="'+pts+'" fill="none" stroke="'+(p===100?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.07)')+'" stroke-width="'+(p===100?'1.2':'0.7')+'"/>';
-    // Číslo prstence vpravo od středu
-    if(p>0&&p<100){
-      var rp=pt(r,1);
-      svg+='<text x="'+(rp[0]+3).toFixed(1)+'" y="'+(rp[1]+4).toFixed(1)+'" font-size="8" fill="rgba(255,255,255,0.2)" font-family="system-ui">'+p+'</text>';
-    }
+    svg+='<polygon points="'+pts+'" fill="none" stroke="'+(p===100?'rgba(255,255,255,0.18)':'rgba(255,255,255,0.06)')+'" stroke-width="'+(p===100?'1.2':'0.7')+'"/>';
   });
 
   // Paprsky
   statDefs.forEach(function(_,i){
     var p2=pt(R,i);
-    svg+='<line x1="'+CX+'" y1="'+CY+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>';
+    svg+='<line x1="'+CX+'" y1="'+CY+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="rgba(255,255,255,0.08)" stroke-width="0.8"/>';
   });
 
-  // Polygon B (průhledný, modrý)
-  svg+='<polygon points="'+polyPts(pctsB)+'" fill="'+colB+'" fill-opacity="0.2" stroke="'+colB+'" stroke-width="2" stroke-linejoin="round"/>';
-  // Polygon A (průhledný, zelený)
-  svg+='<polygon points="'+polyPts(pctsA)+'" fill="'+colA+'" fill-opacity="0.2" stroke="'+colA+'" stroke-width="2" stroke-linejoin="round"/>';
+  // Polygony
+  svg+='<polygon points="'+polyPts(pctsB)+'" fill="'+colB+'" fill-opacity="0.18" stroke="'+colB+'" stroke-width="2" stroke-linejoin="round"/>';
+  svg+='<polygon points="'+polyPts(pctsA)+'" fill="'+colA+'" fill-opacity="0.18" stroke="'+colA+'" stroke-width="2" stroke-linejoin="round"/>';
 
   // Tečky
   statDefs.forEach(function(_,i){
@@ -1039,33 +1028,50 @@ function buildComparePizza(a, b) {
     svg+='<circle cx="'+ptB[0].toFixed(1)+'" cy="'+ptB[1].toFixed(1)+'" r="4.5" fill="'+colB+'" stroke="#1e293b" stroke-width="1.5"/>';
   });
 
-  // Popisky vně kruhu — na světlém pozadí
+  // Popisky — vně kruhu, chytré umístění
   statDefs.forEach(function(stat,i){
     var pA=pctsA[i],pB=pctsB[i];
     var ang=startA+i*step;
-    var lp=pt(R_LABEL,i);
-    var anchor=Math.cos(ang)>0.2?'start':Math.cos(ang)<-0.2?'end':'middle';
-    // Posun aby popisky byly čitelné
-    var dy = Math.sin(ang)>0.5?14:Math.sin(ang)<-0.5?-6:4;
+    var cosA=Math.cos(ang), sinA=Math.sin(ang);
+
+    // Anchor podle úhlu
+    var anchor = cosA>0.3?'start':cosA<-0.3?'end':'middle';
+
+    // Posun popisku od středu
+    var lx=CX+R_LABEL*cosA;
+    var ly=CY+R_LABEL*sinA;
+
+    // Vertikální offset: nahoře = dolů, dole = nahoru
+    var baseY;
+    if(sinA < -0.5) baseY = ly - 18;      // horní část — popisek níž
+    else if(sinA > 0.5) baseY = ly + 8;   // dolní část — popisek výš
+    else baseY = ly - 8;                   // strany — střed
 
     // Název statistiky
-    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+dy).toFixed(1)+'" text-anchor="'+anchor+'" font-size="11" font-weight="600" fill="#1e293b" font-family="system-ui">'+stat.label+'</text>';
-    // Percentily — zelená / modrá vedle sebe
-    var py=lp[1]+dy+13;
-    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+py.toFixed(1)+'" text-anchor="'+anchor+'" font-size="10" font-weight="700" fill="'+colA+'" font-family="system-ui">'+pA+'</text>';
-    // Oddělovač
-    var sepX = anchor==='start' ? lp[0]+14 : anchor==='end' ? lp[0]-14 : lp[0];
-    svg+='<text x="'+sepX.toFixed(1)+'" y="'+py.toFixed(1)+'" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="system-ui"> / </text>';
-    var bOffX = anchor==='start' ? 28 : anchor==='end' ? -28 : 0;
-    svg+='<text x="'+(lp[0]+bOffX).toFixed(1)+'" y="'+py.toFixed(1)+'" text-anchor="'+anchor+'" font-size="10" font-weight="700" fill="'+colB+'" font-family="system-ui">'+pB+'</text>';
+    svg+='<text x="'+lx.toFixed(1)+'" y="'+baseY.toFixed(1)+'" text-anchor="'+anchor+'" font-size="11" font-weight="600" fill="#1e293b" font-family="system-ui">'+stat.label+'</text>';
+
+    // Percentily — A zelená, lomítko, B modrá — na jednom řádku
+    var valY=(baseY+14).toFixed(1);
+    if(anchor==='middle'){
+      // Nahoře/dole — centrovány, A vlevo B vpravo
+      svg+='<text x="'+(lx-18).toFixed(1)+'" y="'+valY+'" text-anchor="end" font-size="10" font-weight="700" fill="'+colA+'" font-family="system-ui">'+pA+'</text>';
+      svg+='<text x="'+lx.toFixed(1)+'" y="'+valY+'" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="system-ui">/</text>';
+      svg+='<text x="'+(lx+18).toFixed(1)+'" y="'+valY+'" text-anchor="start" font-size="10" font-weight="700" fill="'+colB+'" font-family="system-ui">'+pB+'</text>';
+    } else if(anchor==='start'){
+      // Pravá strana
+      svg+='<text x="'+lx.toFixed(1)+'" y="'+valY+'" text-anchor="start" font-size="10" font-weight="700" fill="'+colA+'" font-family="system-ui">'+pA+' / '+pB+'</text>';
+    } else {
+      // Levá strana
+      svg+='<text x="'+lx.toFixed(1)+'" y="'+valY+'" text-anchor="end" font-size="10" font-weight="700" fill="'+colA+'" font-family="system-ui">'+pA+'</text>';
+      svg+='<text x="'+(lx+4).toFixed(1)+'" y="'+valY+'" text-anchor="end" font-size="10" fill="#94a3b8" font-family="system-ui"> / </text>';
+      svg+='<text x="'+(lx+6).toFixed(1)+'" y="'+valY+'" text-anchor="start" font-size="10" font-weight="700" fill="'+colB+'" font-family="system-ui">'+pB+'</text>';
+    }
   });
 
-  // Střed
-  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="6" fill="rgba(255,255,255,0.15)"/>';
-
+  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="5" fill="rgba(255,255,255,0.2)"/>';
   svg+='</svg>';
 
-  // Legenda s fotkami
+  // Legenda
   var legendHtml='<div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px;flex-wrap:wrap">';
   [[a,colA],[b,colB]].forEach(function(item){
     var p=item[0],col=item[1];
