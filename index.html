@@ -268,7 +268,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="view" id="view-shortlist">
     <div class="page-title">Shortlist</div>
     <div class="page-sub" id="shortlist-sub"></div>
-    <div id="shortlist-grid" class="pgrid"></div>
+    <div id="shortlist-grid" class="grid"></div>
   </div>
 
   <div class="view" id="view-totw">
@@ -366,7 +366,7 @@ function renderShortlist(){
     star.dataset.pid=p.id;
     star.title='Odebrat ze shortlistu';
     star.textContent='★';
-    star.onclick=function(e){e.stopPropagation();toggleShortlist(p.id,p.teamId);};
+    (function(pid,tid){star.onclick=function(e){e.stopPropagation();toggleShortlist(pid,tid);};})(p.id,p.teamId);
     card.appendChild(star);
 
     var photoWrap=document.createElement('div');
