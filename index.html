@@ -977,120 +977,100 @@ function buildComparePizza(a, b) {
   var peers=players.filter(function(q){
     return tmGrp(q)===myGroup&&q.leagueId===a.leagueId&&(q.minutesPlayed||0)>=400&&q.id!==a.id&&q.id!==b.id;
   });
-  if(peers.length<5) return '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nedostatek dat pro pizza chart ('+peers.length+' hráčů).</div>';
+  if(peers.length<5) return '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nedostatek dat pro radar ('+peers.length+' hráčů).</div>';
 
   function p90(p,key){var m=p.minutesPlayed||0;if(m<1)return 0;return((p[key]||0)/m)*90;}
   function pct(val,vals){if(!vals.length)return 0;return Math.round(vals.filter(function(v){return v<=val;}).length/vals.length*100);}
 
-  var W=500,H=500,CX=250,CY=250,R_MIN=62,R_MAX=190,R_LABEL=212;
+  var W=500,H=500,CX=250,CY=250,R=185,R_LABEL=210;
   var n=statDefs.length,step=(2*Math.PI)/n,startA=-Math.PI/2;
 
-  var slicesA=statDefs.map(function(stat,i){
+  var pctsA=statDefs.map(function(stat){
     var peerVals=peers.map(function(q){return p90(q,stat.key);});
-    return{stat:stat,pct:pct(p90(a,stat.key),peerVals),angle:startA+i*step};
+    return pct(p90(a,stat.key),peerVals);
   });
-  var slicesB=statDefs.map(function(stat,i){
+  var pctsB=statDefs.map(function(stat){
     var peerVals=peers.map(function(q){return p90(q,stat.key);});
-    return{stat:stat,pct:pct(p90(b,stat.key),peerVals),angle:startA+i*step};
+    return pct(p90(b,stat.key),peerVals);
   });
 
-  function pt(r,ang){return[CX+r*Math.cos(ang),CY+r*Math.sin(ang)];}
+  function pt(r,i){var a=startA+i*step;return[CX+r*Math.cos(a),CY+r*Math.sin(a)];}
+  function polyPoints(pcts){return pcts.map(function(p,i){var v=pt(R*p/100,i);return v[0].toFixed(1)+','+v[1].toFixed(1);}).join(' ');}
 
   var colA='#3ab54a', colB='#3b82f6';
-  var uid='cp'+a.id+'_'+b.id;
-  var logoClip='lgc'+uid;
 
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:500px;display:block;margin:0 auto">'
-    +'<defs><clipPath id="'+logoClip+'"><circle cx="'+CX+'" cy="'+CY+'" r="'+(R_MIN-6)+'"/></clipPath></defs>';
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:500px;display:block;margin:0 auto">';
 
-  // Bg
-  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="'+(R_MAX+5)+'" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>';
+  // Dark background circle
+  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="'+(R+20)+'" fill="#111827"/>';
 
   // Grid rings
-  [25,50,75,100].forEach(function(p){
-    var r=R_MIN+(R_MAX-R_MIN)*p/100;
-    svg+='<circle cx="'+CX+'" cy="'+CY+'" r="'+r+'" fill="none" stroke="'+(p===100?'#d1d5db':'#e5e7eb')+'" stroke-width="'+(p===100?'1.2':'0.8')+'"'+(p<100?' stroke-dasharray="4 3"':'')+'/>';
+  [20,40,60,80,100].forEach(function(p){
+    var r=R*p/100;
+    var pts=statDefs.map(function(_,i){var v=pt(r,i);return v[0].toFixed(1)+','+v[1].toFixed(1);}).join(' ');
+    svg+='<polygon points="'+pts+'" fill="none" stroke="rgba(255,255,255,'+(p===100?'0.15':'0.07')+'" stroke-width="'+(p===100?'1':'0.7')+'"/>';
+    // Label at top
+    if(p<100){
+      var tp=pt(r,0);
+      svg+='<text x="'+(tp[0]+4).toFixed(1)+'" y="'+(tp[1]-2).toFixed(1)+'" font-size="8" fill="rgba(255,255,255,0.25)" font-family="system-ui">'+p+'</text>';
+    }
   });
 
   // Spokes
-  slicesA.forEach(function(s){
-    var p2=pt(R_MAX,s.angle);
-    svg+='<line x1="'+CX+'" y1="'+CY+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="#e5e7eb" stroke-width="0.8"/>';
+  statDefs.forEach(function(_,i){
+    var p2=pt(R,i);
+    svg+='<line x1="'+CX+'" y1="'+CY+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
   });
 
-  // Ghost (100%)
-  slicesA.forEach(function(s){
-    var gap=0.04,a1=s.angle-step/2+gap,a2=s.angle+step/2-gap;
-    var p1=pt(R_MAX,a1),p2=pt(R_MAX,a2);
-    svg+='<path d="M '+CX+' '+CY+' L '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+' A '+R_MAX+' '+R_MAX+' 0 0 1 '+p2[0].toFixed(1)+' '+p2[1].toFixed(1)+' Z" fill="#f0f0f0" stroke="white" stroke-width="2"/>';
+  // Filled polygon B (behind A)
+  svg+='<polygon points="'+polyPoints(pctsB)+'" fill="'+colB+'" fill-opacity="0.25" stroke="'+colB+'" stroke-width="2" stroke-linejoin="round"/>';
+
+  // Filled polygon A
+  svg+='<polygon points="'+polyPoints(pctsA)+'" fill="'+colA+'" fill-opacity="0.3" stroke="'+colA+'" stroke-width="2.5" stroke-linejoin="round"/>';
+
+  // Dots and values
+  statDefs.forEach(function(stat,i){
+    var pA=pctsA[i], pB=pctsB[i];
+    var ptA=pt(R*pA/100,i), ptB=pt(R*pB/100,i);
+
+    // Dot A
+    svg+='<circle cx="'+ptA[0].toFixed(1)+'" cy="'+ptA[1].toFixed(1)+'" r="4" fill="'+colA+'" stroke="#111827" stroke-width="1.5"/>';
+    // Dot B
+    svg+='<circle cx="'+ptB[0].toFixed(1)+'" cy="'+ptB[1].toFixed(1)+'" r="4" fill="'+colB+'" stroke="#111827" stroke-width="1.5"/>';
+
+    // Value labels next to dots
+    var ang=startA+i*step;
+    var anchor=Math.cos(ang)>0.15?'start':Math.cos(ang)<-0.15?'end':'middle';
+    var lp=pt(R_LABEL,i);
+
+    // Stat label
+    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]-2).toFixed(1)+'" text-anchor="'+anchor+'" font-size="10" font-weight="600" fill="rgba(255,255,255,0.85)" font-family="system-ui">'+stat.label+'</text>';
+    // A value (green)
+    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+11).toFixed(1)+'" text-anchor="'+anchor+'" font-size="9" fill="'+colA+'" font-family="system-ui" font-weight="600">'+pA+'</text>';
+    // B value (blue) next to A
+    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+22).toFixed(1)+'" text-anchor="'+anchor+'" font-size="9" fill="'+colB+'" font-family="system-ui" font-weight="600">'+pB+'</text>';
   });
 
-  // Hráč B (modrý, průhledný) — kreslíme první = pod A
-  slicesB.forEach(function(s){
-    var r=R_MIN+(R_MAX-R_MIN)*s.pct/100;
-    var gap=0.04,a1=s.angle-step/2+gap,a2=s.angle+step/2-gap;
-    var p1=pt(r,a1),p2=pt(r,a2);
-    svg+='<path d="M '+CX+' '+CY+' L '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+' A '+r+' '+r+' 0 0 1 '+p2[0].toFixed(1)+' '+p2[1].toFixed(1)+' Z" fill="'+colB+'" fill-opacity="0.3" stroke="white" stroke-width="2"/>';
-  });
-
-  // Hráč A (zelený, plný)
-  slicesA.forEach(function(s,si){
-    var r=R_MIN+(R_MAX-R_MIN)*s.pct/100;
-    var gap=0.04,a1=s.angle-step/2+gap,a2=s.angle+step/2-gap;
-    var p1=pt(r,a1),p2=pt(r,a2);
-    svg+='<path d="M '+CX+' '+CY+' L '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+' A '+r+' '+r+' 0 0 1 '+p2[0].toFixed(1)+' '+p2[1].toFixed(1)+' Z" fill="'+colA+'" fill-opacity="0.8" stroke="white" stroke-width="2.5"/>';
-
-    var bpct=slicesB[si].pct;
-
-    // Badge A a B vedle sebe, ne přes sebe
-    // Umístění: střed plátku A, posuneme oba doleva/doprava
-    var rMid=R_MIN+(R_MAX-R_MIN)*0.5;
-    var bp=pt(rMid,s.angle);
-    var offsetX=Math.sin(s.angle)*7, offsetY=-Math.cos(s.angle)*7;
-
-    // Badge A vlevo od osy
-    if(s.pct>5){
-      var ax=bp[0]-offsetX-12, ay=bp[1]-offsetY;
-      svg+='<rect x="'+(ax-11).toFixed(1)+'" y="'+(ay-7.5).toFixed(1)+'" width="22" height="15" rx="3" fill="'+colA+'"/>';
-      svg+='<text x="'+ax.toFixed(1)+'" y="'+(ay+4.5).toFixed(1)+'" text-anchor="middle" font-size="8" font-weight="700" fill="white" font-family="system-ui">'+s.pct+'</text>';
-    }
-    // Badge B vpravo od osy
-    if(bpct>5){
-      var bx=bp[0]+offsetX+12, by=bp[1]+offsetY;
-      svg+='<rect x="'+(bx-11).toFixed(1)+'" y="'+(by-7.5).toFixed(1)+'" width="22" height="15" rx="3" fill="'+colB+'" fill-opacity="0.9"/>';
-      svg+='<text x="'+bx.toFixed(1)+'" y="'+(by+4.5).toFixed(1)+'" text-anchor="middle" font-size="8" font-weight="700" fill="white" font-family="system-ui">'+bpct+'</text>';
-    }
-
-    // Popisek statistiky
-    var lp=pt(R_LABEL,s.angle);
-    var anchor=Math.cos(s.angle)>0.15?'start':Math.cos(s.angle)<-0.15?'end':'middle';
-    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+3).toFixed(1)+'" text-anchor="'+anchor+'" font-size="10.5" font-weight="600" fill="#374151" font-family="system-ui">'+s.stat.label+'</text>';
-  });
-
-  // Střed — logo
-  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="'+(R_MIN-3)+'" fill="white" stroke="#e5e7eb" stroke-width="1.5"/>';
-  svg+='<image href="logo.jpg" x="'+(CX-(R_MIN-6))+'" y="'+(CY-(R_MIN-6))+'" width="'+(2*(R_MIN-6))+'" height="'+(2*(R_MIN-6))+'" clip-path="url(#'+logoClip+')" preserveAspectRatio="xMidYMid slice"/>';
+  // Center dot
+  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="4" fill="rgba(255,255,255,0.3)"/>';
 
   svg+='</svg>';
 
-  // Legenda nahoře s fotkami
+  // Legend with photos
   var legendHtml='<div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px;flex-wrap:wrap">';
-  [[a,colA,'plné'],[b,colB,'průhledné']].forEach(function(item){
-    var p=item[0],col=item[1],typ=item[2];
+  [[a,colA],[b,colB]].forEach(function(item){
+    var p=item[0],col=item[1];
     var av='';
     if(p.photo) av='<img src="'+p.photo+'" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid '+col+'">';
     else av='<div style="width:32px;height:32px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">'+p.name[0]+'</div>';
     legendHtml+='<div style="display:flex;align-items:center;gap:8px;background:white;border:1.5px solid '+col+';border-radius:8px;padding:6px 12px">'
       +av
-      +'<div>'
-      +'<div style="font-size:12px;font-weight:700;color:'+col+'">'+p.name+'</div>'
-      +'<div style="font-size:10px;color:#9ca3af">Plátky '+typ+'</div>'
-      +'</div></div>';
+      +'<div><div style="font-size:12px;font-weight:700;color:'+col+'">'+p.name+'</div>'
+      +'<div style="font-size:10px;color:#9ca3af">Percentily</div></div></div>';
   });
   legendHtml+='</div>';
-  svg=legendHtml+svg;
 
-  return svg;
+  return legendHtml+svg;
 }
 
 function renderCompare(){
