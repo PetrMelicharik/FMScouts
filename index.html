@@ -1038,23 +1038,27 @@ function buildComparePizza(a, b) {
     var r=R_MIN+(R_MAX-R_MIN)*s.pct/100;
     var gap=0.04,a1=s.angle-step/2+gap,a2=s.angle+step/2-gap;
     var p1=pt(r,a1),p2=pt(r,a2);
-    svg+='<path d="M '+CX+' '+CY+' L '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+' A '+r+' '+r+' 0 0 1 '+p2[0].toFixed(1)+' '+p2[1].toFixed(1)+' Z" fill="'+colA+'" fill-opacity="0.75" stroke="white" stroke-width="2.5"/>';
+    svg+='<path d="M '+CX+' '+CY+' L '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+' A '+r+' '+r+' 0 0 1 '+p2[0].toFixed(1)+' '+p2[1].toFixed(1)+' Z" fill="'+colA+'" fill-opacity="0.8" stroke="white" stroke-width="2.5"/>';
 
-    // Badge A (zelený) + badge B (modrý) vedle sebe
-    var rp=R_MIN+(r-R_MIN)*0.58+R_MIN*0.15;
-    var bp=pt(rp,s.angle);
-    if(s.pct>8){
-      svg+='<rect x="'+(bp[0]-11).toFixed(1)+'" y="'+(bp[1]-7.5).toFixed(1)+'" width="22" height="15" rx="3" fill="'+colA+'"/>';
-      svg+='<text x="'+bp[0].toFixed(1)+'" y="'+(bp[1]+4.5).toFixed(1)+'" text-anchor="middle" font-size="8.5" font-weight="700" fill="white" font-family="system-ui">'+s.pct+'</text>';
-    }
-
-    // B badge — na okraji B plátku
     var bpct=slicesB[si].pct;
-    var rB=R_MIN+(R_MAX-R_MIN)*bpct/100;
-    var bpB=pt(R_MIN+(rB-R_MIN)*0.58+R_MIN*0.15, s.angle);
-    if(bpct>8 && Math.abs(bpct-s.pct)>8){
-      svg+='<rect x="'+(bpB[0]-11).toFixed(1)+'" y="'+(bpB[1]-7.5).toFixed(1)+'" width="22" height="15" rx="3" fill="'+colB+'" fill-opacity="0.85"/>';
-      svg+='<text x="'+bpB[0].toFixed(1)+'" y="'+(bpB[1]+4.5).toFixed(1)+'" text-anchor="middle" font-size="8.5" font-weight="700" fill="white" font-family="system-ui">'+bpct+'</text>';
+
+    // Badge A a B vedle sebe, ne přes sebe
+    // Umístění: střed plátku A, posuneme oba doleva/doprava
+    var rMid=R_MIN+(R_MAX-R_MIN)*0.5;
+    var bp=pt(rMid,s.angle);
+    var offsetX=Math.sin(s.angle)*7, offsetY=-Math.cos(s.angle)*7;
+
+    // Badge A vlevo od osy
+    if(s.pct>5){
+      var ax=bp[0]-offsetX-12, ay=bp[1]-offsetY;
+      svg+='<rect x="'+(ax-11).toFixed(1)+'" y="'+(ay-7.5).toFixed(1)+'" width="22" height="15" rx="3" fill="'+colA+'"/>';
+      svg+='<text x="'+ax.toFixed(1)+'" y="'+(ay+4.5).toFixed(1)+'" text-anchor="middle" font-size="8" font-weight="700" fill="white" font-family="system-ui">'+s.pct+'</text>';
+    }
+    // Badge B vpravo od osy
+    if(bpct>5){
+      var bx=bp[0]+offsetX+12, by=bp[1]+offsetY;
+      svg+='<rect x="'+(bx-11).toFixed(1)+'" y="'+(by-7.5).toFixed(1)+'" width="22" height="15" rx="3" fill="'+colB+'" fill-opacity="0.9"/>';
+      svg+='<text x="'+bx.toFixed(1)+'" y="'+(by+4.5).toFixed(1)+'" text-anchor="middle" font-size="8" font-weight="700" fill="white" font-family="system-ui">'+bpct+'</text>';
     }
 
     // Popisek statistiky
@@ -1069,23 +1073,22 @@ function buildComparePizza(a, b) {
 
   svg+='</svg>';
 
-  // Legenda — přehledná, se jmény
-  svg+='<div style="display:flex;gap:0;justify-content:center;margin-top:14px;border:1.5px solid #e5e7eb;border-radius:10px;overflow:hidden;max-width:380px;margin-left:auto;margin-right:auto">'
-    +'<div style="flex:1;padding:10px 14px;background:rgba(58,181,74,0.08);border-right:1.5px solid #e5e7eb">'
-    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
-    +'<div style="width:12px;height:12px;border-radius:3px;background:'+colA+'"></div>'
-    +'<span style="font-size:12px;font-weight:700;color:'+colA+'">'+a.name+'</span>'
-    +'</div>'
-    +'<div style="font-size:10px;color:#6b7280">Zelene plátky — plné</div>'
-    +'</div>'
-    +'<div style="flex:1;padding:10px 14px;background:rgba(59,130,246,0.08)">'
-    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
-    +'<div style="width:12px;height:12px;border-radius:3px;background:'+colB+'"></div>'
-    +'<span style="font-size:12px;font-weight:700;color:'+colB+'">'+b.name+'</span>'
-    +'</div>'
-    +'<div style="font-size:10px;color:#6b7280">Modre plátky — průhledné</div>'
-    +'</div>'
-    +'</div>';
+  // Legenda nahoře s fotkami
+  var legendHtml='<div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px;flex-wrap:wrap">';
+  [[a,colA,'plné'],[b,colB,'průhledné']].forEach(function(item){
+    var p=item[0],col=item[1],typ=item[2];
+    var av='';
+    if(p.photo) av='<img src="'+p.photo+'" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid '+col+'">';
+    else av='<div style="width:32px;height:32px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">'+p.name[0]+'</div>';
+    legendHtml+='<div style="display:flex;align-items:center;gap:8px;background:white;border:1.5px solid '+col+';border-radius:8px;padding:6px 12px">'
+      +av
+      +'<div>'
+      +'<div style="font-size:12px;font-weight:700;color:'+col+'">'+p.name+'</div>'
+      +'<div style="font-size:10px;color:#9ca3af">Plátky '+typ+'</div>'
+      +'</div></div>';
+  });
+  legendHtml+='</div>';
+  svg=legendHtml+svg;
 
   return svg;
 }
@@ -1167,7 +1170,6 @@ function renderCompare(){
   var pizzaEl=document.createElement('div');
   pizzaEl.className='sbox';
   pizzaEl.innerHTML='<div class="sbox-title">Pizza chart — srovnání percentilů</div>'
-    +'<div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center">Zelená = '+a.name+' · Modrá = '+b.name+' · Čísla = percentil '+a.name+' / percentil '+b.name+'</div>'
     +buildComparePizza(a,b);
   el.appendChild(pizzaEl);
 }
