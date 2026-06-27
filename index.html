@@ -124,6 +124,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 </style>
 </head>
 <body>
+<div class="mob-bar" style="display:none;position:fixed;top:0;left:0;right:0;height:52px;background:#1a2332;z-index:1000;align-items:center;padding:0 16px;gap:12px;border-bottom:1px solid rgba(255,255,255,0.1)">
+  <button onclick="toggleMobileMenu()" style="background:none;border:none;cursor:pointer;padding:6px;color:white" aria-label="Menu">
+    <svg width="24" height="24" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <span style="color:white;font-size:16px;font-weight:700">FM<span style="color:#3ab54a">Scouts</span></span>
+</div>
+<div class="overlay-menu" onclick="toggleMobileMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999"></div>
 <div class="shell">
 <nav class="sidebar">
   <div class="logo-wrap">
