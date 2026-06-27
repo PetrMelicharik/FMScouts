@@ -157,6 +157,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     Hráč víkendu
   </button>
+  <button class="nav-btn" id="nv-totw" onclick="setView('totw');closeMobileMenu()">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Tým týdne
+  </button>
   <button class="nav-btn" id="nv-compare" onclick="setView('compare');closeMobileMenu()">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
     Srovnání
@@ -251,6 +255,17 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       </select>
     </div>
     <div id="weekend-list"><div class="empty"><h3>Načítám...</h3></div></div>
+  </div>
+
+  <div class="view" id="view-totw">
+    <div class="page-title">Tým týdne</div>
+    <div class="page-sub">Nejlepší hráči dle ratingu za posledních 7 dní</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <select class="inp" id="totw-league" onchange="renderTotw()">
+        <option value="">Všechny ligy</option>
+      </select>
+    </div>
+    <div id="totw-content"><div class="empty"><h3>Načítám...</h3></div></div>
   </div>
 
   <div class="view" id="view-compare">
@@ -1261,6 +1276,191 @@ function renderWeekend(){
   });
 }
 
+function renderTotw(){
+  var leagueEl=document.getElementById('totw-league');
+  var leagueFilter=leagueEl?leagueEl.value:'';
+  var el=document.getElementById('totw-content');
+  if(!el)return;
+  el.innerHTML='<div class="empty"><h3>Načítám...</h3></div>';
+
+  var since=new Date(Date.now()-7*24*60*60*1000).toISOString();
+  var url=SUPABASE_URL+'/rest/v1/player_match_stats'
+    +'?select=player_id,rating,goals,assists,minutes,matches!inner(match_date,home_team,away_team)'
+    +'&rating=not.is.null'
+    +'&matches.match_date=gte.'+encodeURIComponent(since)
+    +'&order=rating.desc'
+    +'&limit=500';
+
+  fetch(url,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(!data||!data.length){
+        el.innerHTML='<div class="empty"><h3>Žádné zápasy</h3><p>Žádné zápasy za posledních 7 dní.</p></div>';
+        return;
+      }
+
+      // TM pozice -> slot formace
+      var POS_SLOT={
+        'Goalkeeper':'GK',
+        'Right-Back':'RB','Left-Back':'LB',
+        'Centre-Back':'CB',
+        'Central Midfield':'CM','Defensive Midfield':'CM',
+        'Attacking Midfield':'AM',
+        'Right Winger':'RW','Left Winger':'LW',
+        'Right Midfield':'RW','Left Midfield':'LW',
+        'Centre-Forward':'ST','Second Striker':'ST',
+      };
+
+      // Seskup záznamy podle hráče — vezmi nejvyšší rating
+      var byPlayer={};
+      data.forEach(function(d){
+        var pid=d.player_id;
+        if(!byPlayer[pid]||parseFloat(d.rating)>parseFloat(byPlayer[pid].rating)){
+          byPlayer[pid]=d;
+        }
+      });
+
+      // Najdi nejlepšího hráče pro každý slot
+      var slots={GK:null,RB:null,CB1:null,CB2:null,LB:null,CM1:null,CM2:null,RW:null,AM:null,LW:null,ST:null};
+      var usedPlayers={};
+
+      // Seřaď záznamy podle ratingu
+      var records=Object.values(byPlayer).sort(function(a,b){return parseFloat(b.rating)-parseFloat(a.rating);});
+
+      records.forEach(function(d){
+        var pl=players.find(function(p){return p.id==d.player_id;});
+        if(!pl)return;
+        if(leagueFilter&&pl.leagueName!==leagueFilter)return;
+        if(usedPlayers[pl.id])return;
+
+        var tmPos=tm(pl).position;
+        var slot=tmPos?POS_SLOT[tmPos]:null;
+        if(!slot)return;
+
+        // CB má 2 sloty, CM má 2 sloty
+        if(slot==='CB'){
+          if(!slots.CB1){slots.CB1={pl:pl,d:d};usedPlayers[pl.id]=true;}
+          else if(!slots.CB2){slots.CB2={pl:pl,d:d};usedPlayers[pl.id]=true;}
+        } else if(slot==='CM'){
+          if(!slots.CM1){slots.CM1={pl:pl,d:d};usedPlayers[pl.id]=true;}
+          else if(!slots.CM2){slots.CM2={pl:pl,d:d};usedPlayers[pl.id]=true;}
+        } else if(!slots[slot]){
+          slots[slot]={pl:pl,d:d};
+          usedPlayers[pl.id]=true;
+        }
+      });
+
+      // Sestavení hřiště
+      // Pozice jako % na hřišti (x=levo-pravo, y=brana-brana)
+      var formation=[
+        {slot:'GK',  x:50, y:90, label:'GK'},
+        {slot:'RB',  x:80, y:72, label:'RB'},
+        {slot:'CB1', x:60, y:75, label:'CB'},
+        {slot:'CB2', x:40, y:75, label:'CB'},
+        {slot:'LB',  x:20, y:72, label:'LB'},
+        {slot:'CM1', x:62, y:53, label:'CM'},
+        {slot:'CM2', x:38, y:53, label:'CM'},
+        {slot:'RW',  x:82, y:33, label:'RW'},
+        {slot:'AM',  x:50, y:36, label:'AM'},
+        {slot:'LW',  x:18, y:33, label:'LW'},
+        {slot:'ST',  x:50, y:15, label:'ST'},
+      ];
+
+      el.innerHTML='';
+
+      // Hřiště SVG
+      var W=440,H=620;
+      var pitch='<div style="position:relative;max-width:'+W+'px;margin:0 auto">'
+        +'<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;border-radius:12px">'
+        // Zelené pozadí
+        +'<rect width="'+W+'" height="'+H+'" fill="#2d7a3a"/>'
+        // Pruhy
+        +Array.from({length:8},function(_,i){return '<rect x="0" y="'+(i*H/8)+'" width="'+W+'" height="'+(H/16)+'" fill="rgba(0,0,0,0.04)"/>';}).join('')
+        // Čáry hřiště
+        +'<rect x="20" y="20" width="'+(W-40)+'" height="'+(H-40)+'" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
+        // Středová čára
+        +'<line x1="20" y1="'+(H/2)+'" x2="'+(W-20)+'" y2="'+(H/2)+'" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
+        // Středový kruh
+        +'<circle cx="'+(W/2)+'" cy="'+(H/2)+'" r="60" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
+        +'<circle cx="'+(W/2)+'" cy="'+(H/2)+'" r="3" fill="rgba(255,255,255,0.7)"/>'
+        // Velké vápno nahoře
+        +'<rect x="'+(W/2-80)+'" y="20" width="160" height="80" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
+        // Malé vápno nahoře
+        +'<rect x="'+(W/2-40)+'" y="20" width="80" height="35" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
+        // Velké vápno dole
+        +'<rect x="'+(W/2-80)+'" y="'+(H-100)+'" width="160" height="80" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
+        // Malé vápno dole
+        +'<rect x="'+(W/2-40)+'" y="'+(H-55)+'" width="80" height="35" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
+        // Penaltový puntík nahoře
+        +'<circle cx="'+(W/2)+'" cy="75" r="3" fill="rgba(255,255,255,0.7)"/>'
+        // Penaltový puntík dole
+        +'<circle cx="'+(W/2)+'" cy="'+(H-75)+'" r="3" fill="rgba(255,255,255,0.7)"/>'
+        +'</svg>'
+        // Hráči — absolutně pozicováni přes hřiště
+        +'<div style="position:absolute;top:0;left:0;right:0;bottom:0">';
+
+      formation.forEach(function(pos){
+        var entry=slots[pos.slot];
+        var xPct=pos.x, yPct=pos.y;
+        var rating=entry?parseFloat(entry.d.rating):null;
+        var rCol=rating?rc(rating):'#aaa';
+
+        var photoHtml='';
+        if(entry&&entry.pl.photo){
+          photoHtml='<img src="'+entry.pl.photo+'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:3px solid white;display:block;">';
+        } else {
+          photoHtml='<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:16px;">?</div>';
+        }
+
+        var nameHtml=entry?entry.pl.name.split(' ').pop():'—';
+        var ratingHtml=rating?'<div style="font-size:11px;font-weight:800;color:'+rCol+';background:white;border-radius:4px;padding:0 4px;margin-top:2px;display:inline-block">'+rating.toFixed(1)+'</div>':'';
+        var goalHtml=entry&&(entry.d.goals||entry.d.assists)?'<div style="font-size:9px;color:rgba(255,255,255,0.8);margin-top:1px">'+(entry.d.goals?'G'+entry.d.goals:'')+(entry.d.goals&&entry.d.assists?' ':' ')+(entry.d.assists?'A'+entry.d.assists:'')+'</div>':'';
+
+        var clickFn=entry?'openPlayer('+entry.pl.id+','+entry.pl.teamId+')':'';
+
+        pitch+='<div style="position:absolute;left:'+xPct+'%;top:'+yPct+'%;transform:translate(-50%,-50%);text-align:center;cursor:'+(entry?'pointer':'default')+'" '+(entry?'onclick="'+clickFn+'"':'')+'>'
+          +photoHtml
+          +'<div style="font-size:10px;font-weight:700;color:white;text-shadow:0 1px 3px rgba(0,0,0,0.8);margin-top:2px;white-space:nowrap">'+nameHtml+'</div>'
+          +ratingHtml
+          +goalHtml
+          +'</div>';
+      });
+
+      pitch+='</div></div>';
+      el.innerHTML=pitch;
+
+      // Sestava pod hřištěm
+      var listHtml='<div style="margin-top:16px;display:flex;flex-direction:column;gap:6px">';
+      formation.forEach(function(pos){
+        var entry=slots[pos.slot];
+        if(!entry)return;
+        var pl=entry.pl, d=entry.d;
+        var rating=parseFloat(d.rating);
+        var row=document.createElement('div');
+        row.className='tow-row';
+        row.style.cursor='pointer';
+        row.onclick=function(){openPlayer(pl.id,pl.teamId);};
+        row.innerHTML='<div style="width:32px;text-align:center;font-size:11px;font-weight:700;color:var(--muted)">'+pos.label+'</div>';
+        var av=document.createElement('div');
+        av.appendChild(makeAv(pl.photo,PC[pl.position]||'#3ab54a',pl.name,32));
+        row.appendChild(av);
+        var info=document.createElement('div');
+        info.style.cssText='flex:1;min-width:0';
+        info.innerHTML='<div style="font-size:13px;font-weight:700">'+pl.name+'</div>'
+          +'<div style="font-size:11px;color:var(--muted)">'+pl.teamName+' · '+ll(pl)+'</div>';
+        row.appendChild(info);
+        var rEl=document.createElement('div');
+        rEl.innerHTML='<div style="font-size:16px;font-weight:800;color:'+rc(rating)+'">'+rating.toFixed(2)+'</div>'
+          +(d.goals?'<div style="font-size:10px;color:var(--muted)">G'+d.goals+(d.assists?' A'+d.assists:'')+'</div>':'');
+        row.appendChild(rEl);
+        el.appendChild(row);
+      });
+    })
+    .catch(function(){
+      el.innerHTML='<div class="empty"><h3>Chyba načítání</h3></div>';
+    });
+}
+
 function setView(v){
   document.querySelectorAll('.view').forEach(function(e){e.classList.remove('active');});
   document.querySelectorAll('.nav-btn').forEach(function(e){e.classList.remove('active');});
@@ -1269,6 +1469,7 @@ function setView(v){
   if(v==='compare')renderCompare();
   if(v==='tow')renderTow();
   if(v==='weekend')renderWeekend();
+  if(v==='totw')renderTotw();
 }
 
 loadData();
