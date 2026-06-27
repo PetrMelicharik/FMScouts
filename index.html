@@ -1123,7 +1123,7 @@ function renderCompare(){
       +(tm(p).marketValue?'<div style="font-size:13px;font-weight:700;color:var(--green-dark)">'+tm(p).marketValue+'</div><div style="font-size:10px;color:var(--muted)">TRZ. HODNOTA</div>':'')
       +(tm(p).contractUntil?'<div style="font-size:12px;color:var(--muted);margin-top:4px">Smlouva: '+tm(p).contractUntil+'</div>':'')
       +(p.age?'<div style="font-size:12px;color:var(--muted)">'+p.age+' let</div>':'')
-      +'<button class="btn" style="margin-top:10px;font-size:11px;border-color:'+col+';color:'+col+'" onclick="toggleCmp('+p.id+',''+p.teamId+'')">Odebrat</button>';
+      +'<button class="btn" style="margin-top:10px;font-size:11px;border-color:'+col+';color:'+col+'" onclick="toggleCmp('+p.id+',\''+p.teamId+'\'">Odebrat</button>';
     grid.appendChild(card);
   });
   el.appendChild(grid);
