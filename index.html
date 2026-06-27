@@ -125,6 +125,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   #overlay{padding-top:52px}
   #overlay .modal{max-height:calc(100vh - 52px)}
 }
+.star-btn{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;font-size:18px;line-height:1;padding:2px;opacity:0.6;transition:opacity .15s,transform .15s;z-index:2}
+.star-btn:hover{opacity:1;transform:scale(1.2)}
+.star-btn.active{opacity:1;color:#f59e0b}
+.card{position:relative}
 </style>
 </head>
 <body>
@@ -156,6 +160,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <button class="nav-btn" id="nv-weekend" onclick="setView('weekend');closeMobileMenu()">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     Hráč víkendu
+  </button>
+  <button class="nav-btn" id="nv-shortlist" onclick="setView('shortlist');closeMobileMenu()">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    Shortlist
   </button>
   <button class="nav-btn" id="nv-totw" onclick="setView('totw');closeMobileMenu()">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
@@ -257,6 +265,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div id="weekend-list"><div class="empty"><h3>Načítám...</h3></div></div>
   </div>
 
+  <div class="view" id="view-shortlist">
+    <div class="page-title">Shortlist</div>
+    <div class="page-sub" id="shortlist-sub"></div>
+    <div id="shortlist-grid" class="pgrid"></div>
+  </div>
+
   <div class="view" id="view-totw">
     <div class="page-title">Tým týdne</div>
     <div class="page-sub">Nejlepší hráči dle ratingu za posledních 7 dní</div>
@@ -296,6 +310,103 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <script>
 var players=[], cmpList=[], current=null, tmData={};
+var shortlist=[];
+
+function loadShortlist(){
+  try{shortlist=JSON.parse(localStorage.getItem('fmscouts_shortlist')||'[]');}catch(e){shortlist=[];}
+}
+function saveShortlist(){
+  try{localStorage.setItem('fmscouts_shortlist',JSON.stringify(shortlist));}catch(e){}
+}
+function isInShortlist(id){return shortlist.some(function(s){return s.id==id;});}
+function toggleShortlist(id,teamId){
+  if(isInShortlist(id)){
+    shortlist=shortlist.filter(function(s){return s.id!=id;});
+  } else {
+    var p=players.find(function(p){return p.id==id&&p.teamId==teamId;});
+    if(p) shortlist.push({id:p.id,teamId:p.teamId});
+  }
+  saveShortlist();
+  // Update all star buttons
+  document.querySelectorAll('.star-btn[data-pid="'+id+'"]').forEach(function(btn){
+    btn.classList.toggle('active',isInShortlist(id));
+    btn.title=isInShortlist(id)?'Odebrat ze shortlistu':'Přidat do shortlistu';
+  });
+  // Update modal star if open
+  var mStar=document.getElementById('m-star');
+  if(mStar&&mStar.dataset.pid==id){
+    mStar.classList.toggle('active',isInShortlist(id));
+  }
+  if(document.getElementById('view-shortlist').style.display!=='none') renderShortlist();
+}
+
+function renderShortlist(){
+  loadShortlist();
+  var sub=document.getElementById('shortlist-sub');
+  var grid=document.getElementById('shortlist-grid');
+  if(!sub||!grid)return;
+  var list=shortlist.map(function(s){return players.find(function(p){return p.id==s.id&&p.teamId==s.teamId;});}).filter(Boolean);
+  sub.textContent=list.length+' hráčů';
+  grid.innerHTML='';
+  if(!list.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><h3>Shortlist je prázdný</h3><p>Klikni na hvězdičku u hráče pro přidání.</p></div>';
+    return;
+  }
+  list.forEach(function(p){
+    var col=PC[p.position]||'#3ab54a';
+    var inC=cmpList.some(function(c){return c.id==p.id&&c.teamId==p.teamId;});
+    var r=parseFloat(p.rating)||null;
+    var card=document.createElement('div');
+    card.className='card'+(inC?' pinned':'');
+    card.onclick=function(){openPlayer(p.id,p.teamId);};
+
+    // Star button
+    var star=document.createElement('button');
+    star.className='star-btn active';
+    star.dataset.pid=p.id;
+    star.title='Odebrat ze shortlistu';
+    star.textContent='★';
+    star.onclick=function(e){e.stopPropagation();toggleShortlist(p.id,p.teamId);};
+    card.appendChild(star);
+
+    var photoWrap=document.createElement('div');
+    photoWrap.style.cssText='display:flex;justify-content:center;margin-bottom:10px';
+    photoWrap.appendChild(makeAv(p.photo,col,p.name,58));
+    card.appendChild(photoWrap);
+
+    var nameEl=document.createElement('div');
+    nameEl.style.cssText='font-size:13px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    nameEl.textContent=p.name;
+    card.appendChild(nameEl);
+
+    var teamEl=document.createElement('div');
+    teamEl.style.cssText='font-size:11px;color:var(--muted);text-align:center;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    teamEl.textContent=p.teamName||'—';
+    card.appendChild(teamEl);
+
+    var badgeWrap=document.createElement('div');
+    badgeWrap.style.cssText='display:flex;justify-content:center;gap:5px;margin:8px 0';
+    var tmPos=tm(p).position;
+    badgeWrap.innerHTML='<span class="badge bp">'+(tmPos||PCS[p.position]||'—')+'</span>';
+    card.appendChild(badgeWrap);
+
+    var info=document.createElement('div');
+    info.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px';
+    info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(p.age||'—')+'</div></div>'
+      +'<div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">'+fmtHeight(p.height)+'</div></div>'
+      +'<div class="ci" style="grid-column:1/-1"><div class="ci-lbl">Národnost</div><div class="ci-val">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
+      +(p.goals!=null?'<div class="ci"><div class="ci-lbl">Góly/Ass</div><div class="ci-val" style="color:var(--green-dark)">'+(p.goals||0)+'/'+(p.assists||0)+'</div></div>':'')
+      +(r?'<div class="ci"><div class="ci-lbl">Rating</div><div class="ci-val" style="color:'+rc(r)+';font-weight:800">'+r.toFixed(2)+'</div></div>':'');
+    card.appendChild(info);
+
+    var league=document.createElement('div');
+    league.className='card-league';
+    league.innerHTML='<span class="dot"></span>'+ll(p);
+    card.appendChild(league);
+
+    grid.appendChild(card);
+  });
+}
 
 function toggleMobileMenu(){
   var sidebar=document.querySelector('.sidebar');
@@ -561,6 +672,15 @@ function renderPlayers(){
     card.className='card'+(inC?' pinned':'');
     card.onclick=function(){openPlayer(p.id,p.teamId);};
 
+    // Star button
+    var starBtn=document.createElement('button');
+    starBtn.className='star-btn'+(isInShortlist(p.id)?' active':'');
+    starBtn.dataset.pid=p.id;
+    starBtn.title=isInShortlist(p.id)?'Odebrat ze shortlistu':'Přidat do shortlistu';
+    starBtn.textContent='★';
+    (function(pid,tid){starBtn.onclick=function(e){e.stopPropagation();toggleShortlist(pid,tid);};})(p.id,p.teamId);
+    card.appendChild(starBtn);
+
     // Photo
     var photoWrap=document.createElement('div');
     photoWrap.style.cssText='display:flex;justify-content:center;margin-bottom:10px';
@@ -672,6 +792,23 @@ function openPlayer(id,teamId){
 
   if(p.appearances != null && (p.minutesPlayed||0) >= 90 && playerCat(p) !== 'Goalkeeper') {
     body += buildPizzaChart(p);
+  }
+  // Star button in modal header
+  var mStarEl=document.getElementById('m-star');
+  if(!mStarEl){
+    var mStarBtn=document.createElement('button');
+    mStarBtn.id='m-star';
+    mStarBtn.className='star-btn'+(isInShortlist(p.id)?' active':'');
+    mStarBtn.dataset.pid=p.id;
+    mStarBtn.title=isInShortlist(p.id)?'Odebrat ze shortlistu':'Přidat do shortlistu';
+    mStarBtn.textContent='★';
+    mStarBtn.style.cssText='position:static;font-size:22px;margin-left:8px;vertical-align:middle';
+    (function(pid,tid){mStarBtn.onclick=function(){toggleShortlist(pid,tid);};})(p.id,p.teamId);
+    document.getElementById('m-name').appendChild(mStarBtn);
+  } else {
+    mStarEl.dataset.pid=p.id;
+    mStarEl.className='star-btn'+(isInShortlist(p.id)?' active':'');
+    (function(pid,tid){mStarEl.onclick=function(){toggleShortlist(pid,tid);};})(p.id,p.teamId);
   }
   document.getElementById('m-body').innerHTML=body;
   document.getElementById('overlay').style.display='flex';
@@ -1476,6 +1613,7 @@ function setView(v){
   if(v==='tow')renderTow();
   if(v==='weekend')renderWeekend();
   if(v==='totw')renderTotw();
+  if(v==='shortlist')renderShortlist();
 }
 
 loadData();
