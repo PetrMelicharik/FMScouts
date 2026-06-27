@@ -1003,7 +1003,7 @@ function buildPizzaChart(p) {
   // Logo badge
   var lbx=CX+Math.round(R_MIN*0.6),lby=CY+Math.round(R_MIN*0.6);
   svg+='<circle cx="'+lbx+'" cy="'+lby+'" r="18" fill="white" stroke="#e5e7eb" stroke-width="1.5"/>';
-  svg+='<image href="logo.jpg" x="'+(lbx-14)+'" y="'+(lby-14)+'" width="28" height="28" clip-path="url(#lg'+uid+')" preserveAspectRatio="xMidYMid slice"/>';
+  if(p.teamId) svg+='<image href="https://media.api-sports.io/football/teams/'+p.teamId+'.png" x="'+(lbx-13)+'" y="'+(lby-13)+'" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>';
 
   svg+='</svg>';
 
