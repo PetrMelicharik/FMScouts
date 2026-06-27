@@ -567,7 +567,7 @@ function renderPlayers(){
     var badgeWrap=document.createElement('div');
     badgeWrap.style.cssText='display:flex;justify-content:center;gap:5px;margin:8px 0';
     var tmPos=tm(p).position;
-    badgeWrap.innerHTML='<span class="badge bp">'+(tmPos||PCS[p.position]||'—')+'</span>'+(inC?'<span style="color:var(--green);font-size:13px">★</span>':'');
+    badgeWrap.innerHTML='<span class="badge bp">'+(tmPos||PCS[p.position]||'—')+'</span>'+(inC?'<span style="color:var(--green);font-size:13px">*</span>':'');
     card.appendChild(badgeWrap);
 
     // Info grid
@@ -611,7 +611,7 @@ function openPlayer(id,teamId){
   document.getElementById('m-sub').innerHTML='<span class="badge bp">'+(tm(p).position||PCS[p.position]||'—')+'</span> '+(p.teamName||'—')+' · '+ll(p);
   var inC=cmpList.some(function(c){return c.id==p.id&&c.teamId==p.teamId;});
   var btn=document.getElementById('m-btn');
-  btn.textContent=inC?'✓ Odebrat ze srovnání':'+ Přidat do srovnání';
+  btn.textContent=inC?'Odebrat ze srovnání':'+ Přidat do srovnání';
   btn.className='btn'+(inC?'':' primary');
   btn.onclick=function(){toggleCmp(p.id,p.teamId);};
 
@@ -652,7 +652,7 @@ function openPlayer(id,teamId){
       +'<div class="sc"><div class="sv" style="color:#dc2626">'+(p.redCards||0)+'</div><div class="sl">ČK</div></div>'
       +'</div></div>';
   } else {
-    body+='<div class="no-stats">📊 Statistiky pro tohoto hráče nejsou dostupné.</div>';
+    body+='<div class="no-stats">Statistiky pro tohoto hráče nejsou dostupné.</div>';
   }
 
   if(p.appearances != null && (p.minutesPlayed||0) >= 90 && playerCat(p) !== 'Goalkeeper') {
@@ -669,7 +669,7 @@ function openPlayer(id,teamId){
 }
 
 
-// ── Pizza Chart ───────────────────────────────────────────────────────────────
+// Pizza Chart
 
 var PIZZA_STATS = {
   Attacker: [
