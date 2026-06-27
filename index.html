@@ -380,7 +380,7 @@ function renderShortlist(){
     card.appendChild(nameEl);
 
     var teamEl=document.createElement('div');
-    teamEl.style.cssText='font-size:11px;color:var(--muted);text-align:center;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;justify-content:center;gap:4px';
+    teamEl.style.cssText='font-size:11px;color:var(--muted);text-align:center;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap';
     teamEl.innerHTML=teamLogo(p,16)+'<span>'+(p.teamName||'—')+'</span>';
     card.appendChild(teamEl);
 
@@ -704,8 +704,8 @@ function renderPlayers(){
     card.appendChild(nameEl);
 
     var teamEl=document.createElement('div');
-    teamEl.style.cssText='font-size:11px;color:var(--muted);text-align:center;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-    teamEl.textContent=p.teamName||'—';
+    teamEl.style.cssText='font-size:11px;color:var(--muted);text-align:center;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap';
+    teamEl.innerHTML=teamLogo(p,16)+'<span>'+(p.teamName||'—')+'</span>';
     card.appendChild(teamEl);
 
     // Badge
