@@ -1559,23 +1559,31 @@ function renderTotw(){
         var rCol=rating?rc(rating):'#aaa';
 
         var photoHtml='';
+        var sz=54;
         if(entry&&entry.pl.photo){
-          photoHtml='<img src="'+entry.pl.photo+'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:3px solid white;display:block;">';
+          photoHtml='<img src="'+entry.pl.photo+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;object-fit:cover;border:3px solid white;display:block;box-shadow:0 2px 8px rgba(0,0,0,0.4)">';
         } else {
-          photoHtml='<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:16px;">?</div>';
+          photoHtml='<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:rgba(255,255,255,0.15);border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:20px;color:rgba(255,255,255,0.5)">?</div>';
+        }
+
+        // Team logo badge
+        var teamLogoHtml='';
+        if(entry&&entry.pl.teamId){
+          teamLogoHtml='<img src="https://media.api-sports.io/football/teams/'+entry.pl.teamId+'.png" style="width:18px;height:18px;object-fit:contain;position:absolute;bottom:0;right:0;background:white;border-radius:50%;padding:1px;box-shadow:0 1px 3px rgba(0,0,0,0.3)">';
         }
 
         var nameHtml=entry?entry.pl.name.split(' ').pop():'—';
-        var ratingHtml=rating?'<div style="font-size:11px;font-weight:800;color:'+rCol+';background:white;border-radius:4px;padding:0 4px;margin-top:2px;display:inline-block">'+rating.toFixed(1)+'</div>':'';
-        var goalHtml=entry&&(entry.d.goals||entry.d.assists)?'<div style="font-size:9px;color:rgba(255,255,255,0.8);margin-top:1px">'+(entry.d.goals?'G'+entry.d.goals:'')+(entry.d.goals&&entry.d.assists?' ':' ')+(entry.d.assists?'A'+entry.d.assists:'')+'</div>':'';
+        var ratingHtml=rating?'<div style="font-size:12px;font-weight:800;color:'+rCol+';background:white;border-radius:5px;padding:1px 7px;margin-top:3px;display:inline-block;box-shadow:0 1px 4px rgba(0,0,0,0.2)">'+rating.toFixed(1)+'</div>':'';
 
         var clickFn=entry?'openPlayer('+entry.pl.id+','+entry.pl.teamId+')':'';
 
         pitch+='<div style="position:absolute;left:'+xPct+'%;top:'+yPct+'%;transform:translate(-50%,-50%);text-align:center;cursor:'+(entry?'pointer':'default')+'" '+(entry?'onclick="'+clickFn+'"':'')+'>'
+          +'<div style="position:relative;display:inline-block">'
           +photoHtml
-          +'<div style="font-size:10px;font-weight:700;color:white;text-shadow:0 1px 3px rgba(0,0,0,0.8);margin-top:2px;white-space:nowrap">'+nameHtml+'</div>'
+          +teamLogoHtml
+          +'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:white;text-shadow:0 1px 4px rgba(0,0,0,0.9);margin-top:3px;white-space:nowrap">'+nameHtml+'</div>'
           +ratingHtml
-          +goalHtml
           +'</div>';
       });
 
