@@ -1283,6 +1283,12 @@ function renderTotw(){
   if(!el)return;
   el.innerHTML='<div class="empty"><h3>Načítám...</h3></div>';
 
+  // Naplň filtr lig pokud ještě není
+  if(leagueEl&&leagueEl.options.length<=1){
+    var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
+    leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;leagueEl.appendChild(o);});
+  }
+
   var since=new Date(Date.now()-7*24*60*60*1000).toISOString();
   var url=SUPABASE_URL+'/rest/v1/player_match_stats'
     +'?select=player_id,rating,goals,assists,minutes,matches!inner(match_date,home_team,away_team)'
