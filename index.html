@@ -400,8 +400,8 @@ function renderShortlist(){
     card.appendChild(info);
 
     var league=document.createElement('div');
-    league.className='card-league';
-    league.innerHTML=leagueLogo(p,14)+' '+ll(p);
+    league.style.cssText='display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-top:6px;padding-top:8px;border-top:1px solid var(--border)';
+    league.innerHTML=leagueLogo(p,14)+'<span>'+ll(p)+'</span>';
     card.appendChild(league);
 
     grid.appendChild(card);
