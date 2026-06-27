@@ -753,7 +753,7 @@ function openPlayer(id,teamId){
   mav.innerHTML='';
   mav.appendChild(makeAv(p.photo,col,p.name,54));
   document.getElementById('m-name').textContent=p.name;
-  document.getElementById('m-sub').innerHTML='<span class="badge bp">'+(tm(p).position||PCS[p.position]||'—')+'</span> '+teamLogo(p,18)+' '+(p.teamName||'—')+' · '+leagueLogo(p,14)+' '+ll(p);
+  document.getElementById('m-sub').innerHTML='<span class="badge bp">'+(tm(p).position||PCS[p.position]||'—')+'</span> '+teamLogo(p,20)+' <strong>'+(p.teamName||'—')+'</strong>';
   var inC=cmpList.some(function(c){return c.id==p.id&&c.teamId==p.teamId;});
   var btn=document.getElementById('m-btn');
   btn.textContent=inC?'Odebrat ze srovnání':'+ Přidat do srovnání';
@@ -765,8 +765,8 @@ function openPlayer(id,teamId){
     +'<div class="icell"><div class="ilbl">Věk</div><div class="ival">'+(p.age||'—')+' let</div></div>'
     +'<div class="icell"><div class="ilbl">Národnost</div><div class="ival">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
     +'<div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">'+(fmtHeight(p.height))+(p.weight?' / '+fmtWeight(p.weight):'')+'</div></div>'
-    +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival">'+(p.teamName||'—')+'</div></div>'
-    +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival">'+ll(p)+' · '+(p.season||'—')+'</div></div>'
+    +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival" style="display:flex;align-items:center;gap:6px">'+teamLogo(p,22)+'<span>'+(p.teamName||'—')+'</span></div></div>'
+    +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Liga · Sezóna</div><div class="ival" style="display:flex;align-items:center;gap:6px">'+leagueLogo(p,20)+'<span>'+ll(p)+' · '+(p.season||'—')+'</span></div></div>'
 
     +(tm(p).marketValue?'<div class="icell"><div class="ilbl">Tržní hodnota</div><div class="ival" style="color:var(--green-dark);font-weight:800">'+tm(p).marketValue+'</div></div>':'')
     +(tm(p).contractUntil?'<div class="icell"><div class="ilbl">Smlouva do</div><div class="ival">'+tm(p).contractUntil+'</div></div>':'')
