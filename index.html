@@ -401,7 +401,7 @@ function renderShortlist(){
 
     var league=document.createElement('div');
     league.className='card-league';
-    league.innerHTML='<span class="dot"></span>'+ll(p);
+    league.innerHTML=leagueLogo(p,14)+' '+ll(p);
     card.appendChild(league);
 
     grid.appendChild(card);
