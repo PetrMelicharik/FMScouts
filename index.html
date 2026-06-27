@@ -108,6 +108,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mba{height:100%;border-radius:3px 0 0 3px;background:var(--green)}
 .mbb{height:100%;border-radius:0 3px 3px 0;background:var(--blue);margin-left:auto}
 .mlbl{font-size:11px;color:var(--muted);min-width:90px;text-align:center}
+
+@media(max-width:700px){
+  .sidebar{position:fixed;left:-260px;top:0;height:100vh;z-index:1000;transition:left .25s ease}
+  .sidebar.open{left:0;box-shadow:4px 0 24px rgba(0,0,0,0.5)}
+  .main{margin-left:0!important;padding:12px}
+  .pgrid{grid-template-columns:1fr 1fr}
+  .mob-bar{display:flex!important}
+}
+@media(min-width:701px){.mob-bar{display:none!important}}
+
+@media(max-width:700px){
+  .main{padding-top:64px!important}
+}
 </style>
 </head>
 <body>
@@ -121,19 +134,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     </div>
   </div>
   <div class="nav-sec">Přehled</div>
-  <button class="nav-btn active" id="nv-players" onclick="setView('players')">
+  <button class="nav-btn active" id="nv-players" onclick="setView('players');closeMobileMenu()">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
     Hráči
   </button>
-  <button class="nav-btn" id="nv-tow" onclick="setView('tow')">
+  <button class="nav-btn" id="nv-tow" onclick="setView('tow');closeMobileMenu()">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     Top hráči
   </button>
-  <button class="nav-btn" id="nv-weekend" onclick="setView('weekend')">
+  <button class="nav-btn" id="nv-weekend" onclick="setView('weekend');closeMobileMenu()">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     Hráč víkendu
   </button>
-  <button class="nav-btn" id="nv-compare" onclick="setView('compare')">
+  <button class="nav-btn" id="nv-compare" onclick="setView('compare');closeMobileMenu()">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
     Srovnání
   </button>
@@ -257,6 +270,24 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <script>
 var players=[], cmpList=[], current=null, tmData={};
+
+function toggleMobileMenu(){
+  var sidebar=document.querySelector('.sidebar');
+  var overlay=document.querySelector('.overlay-menu');
+  var isOpen=sidebar.classList.contains('open');
+  sidebar.classList.toggle('open',!isOpen);
+  overlay.classList.toggle('open',!isOpen);
+  overlay.style.display=isOpen?'none':'block';
+}
+
+// Close menu when nav item clicked on mobile
+function closeMobileMenu(){
+  var sidebar=document.querySelector('.sidebar');
+  var overlay=document.querySelector('.overlay-menu');
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+  overlay.style.display='none';
+}
 
 // Supabase
 var SUPABASE_URL = 'https://quhqfxhypuailolpvetx.supabase.co';
