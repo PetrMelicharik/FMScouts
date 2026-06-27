@@ -982,7 +982,8 @@ function buildComparePizza(a, b) {
   function p90(p,key){var m=p.minutesPlayed||0;if(m<1)return 0;return((p[key]||0)/m)*90;}
   function pct(val,vals){if(!vals.length)return 0;return Math.round(vals.filter(function(v){return v<=val;}).length/vals.length*100);}
 
-  var W=500,H=500,CX=250,CY=250,R=185,R_LABEL=210;
+  // Větší viewBox — víc místa pro popisky
+  var W=600,H=600,CX=300,CY=300,R=170,R_LABEL=200;
   var n=statDefs.length,step=(2*Math.PI)/n,startA=-Math.PI/2;
 
   var pctsA=statDefs.map(function(stat){
@@ -995,78 +996,87 @@ function buildComparePizza(a, b) {
   });
 
   function pt(r,i){var a=startA+i*step;return[CX+r*Math.cos(a),CY+r*Math.sin(a)];}
-  function polyPoints(pcts){return pcts.map(function(p,i){var v=pt(R*p/100,i);return v[0].toFixed(1)+','+v[1].toFixed(1);}).join(' ');}
+  function polyPts(pcts){return pcts.map(function(p,i){var v=pt(R*p/100,i);return v[0].toFixed(1)+','+v[1].toFixed(1);}).join(' ');}
 
-  var colA='#3ab54a', colB='#3b82f6';
+  var colA='#22c55e', colB='#3b82f6';
 
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:500px;display:block;margin:0 auto">';
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px;display:block;margin:0 auto">';
 
-  // Dark background circle
-  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="'+(R+20)+'" fill="#111827"/>';
+  // Světlé pozadí
+  svg+='<rect width="'+W+'" height="'+H+'" fill="#f8fafc" rx="16"/>';
 
-  // Grid rings
+  // Radar kruh
+  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="'+(R+8)+'" fill="#1e293b" stroke="#334155" stroke-width="1"/>';
+
+  // Mřížka — hexagonální prstence
   [20,40,60,80,100].forEach(function(p){
     var r=R*p/100;
     var pts=statDefs.map(function(_,i){var v=pt(r,i);return v[0].toFixed(1)+','+v[1].toFixed(1);}).join(' ');
-    svg+='<polygon points="'+pts+'" fill="none" stroke="rgba(255,255,255,'+(p===100?'0.15':'0.07')+'" stroke-width="'+(p===100?'1':'0.7')+'"/>';
-    // Label at top
-    if(p<100){
-      var tp=pt(r,0);
-      svg+='<text x="'+(tp[0]+4).toFixed(1)+'" y="'+(tp[1]-2).toFixed(1)+'" font-size="8" fill="rgba(255,255,255,0.25)" font-family="system-ui">'+p+'</text>';
+    svg+='<polygon points="'+pts+'" fill="none" stroke="'+(p===100?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.07)')+'" stroke-width="'+(p===100?'1.2':'0.7')+'"/>';
+    // Číslo prstence vpravo od středu
+    if(p>0&&p<100){
+      var rp=pt(r,1);
+      svg+='<text x="'+(rp[0]+3).toFixed(1)+'" y="'+(rp[1]+4).toFixed(1)+'" font-size="8" fill="rgba(255,255,255,0.2)" font-family="system-ui">'+p+'</text>';
     }
   });
 
-  // Spokes
+  // Paprsky
   statDefs.forEach(function(_,i){
     var p2=pt(R,i);
-    svg+='<line x1="'+CX+'" y1="'+CY+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
+    svg+='<line x1="'+CX+'" y1="'+CY+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>';
   });
 
-  // Filled polygon B (behind A)
-  svg+='<polygon points="'+polyPoints(pctsB)+'" fill="'+colB+'" fill-opacity="0.25" stroke="'+colB+'" stroke-width="2" stroke-linejoin="round"/>';
+  // Polygon B (průhledný, modrý)
+  svg+='<polygon points="'+polyPts(pctsB)+'" fill="'+colB+'" fill-opacity="0.2" stroke="'+colB+'" stroke-width="2" stroke-linejoin="round"/>';
+  // Polygon A (průhledný, zelený)
+  svg+='<polygon points="'+polyPts(pctsA)+'" fill="'+colA+'" fill-opacity="0.2" stroke="'+colA+'" stroke-width="2" stroke-linejoin="round"/>';
 
-  // Filled polygon A
-  svg+='<polygon points="'+polyPoints(pctsA)+'" fill="'+colA+'" fill-opacity="0.3" stroke="'+colA+'" stroke-width="2.5" stroke-linejoin="round"/>';
+  // Tečky
+  statDefs.forEach(function(_,i){
+    var pA=pctsA[i],pB=pctsB[i];
+    var ptA=pt(R*pA/100,i),ptB=pt(R*pB/100,i);
+    svg+='<circle cx="'+ptA[0].toFixed(1)+'" cy="'+ptA[1].toFixed(1)+'" r="4.5" fill="'+colA+'" stroke="#1e293b" stroke-width="1.5"/>';
+    svg+='<circle cx="'+ptB[0].toFixed(1)+'" cy="'+ptB[1].toFixed(1)+'" r="4.5" fill="'+colB+'" stroke="#1e293b" stroke-width="1.5"/>';
+  });
 
-  // Dots and values
+  // Popisky vně kruhu — na světlém pozadí
   statDefs.forEach(function(stat,i){
-    var pA=pctsA[i], pB=pctsB[i];
-    var ptA=pt(R*pA/100,i), ptB=pt(R*pB/100,i);
-
-    // Dot A
-    svg+='<circle cx="'+ptA[0].toFixed(1)+'" cy="'+ptA[1].toFixed(1)+'" r="4" fill="'+colA+'" stroke="#111827" stroke-width="1.5"/>';
-    // Dot B
-    svg+='<circle cx="'+ptB[0].toFixed(1)+'" cy="'+ptB[1].toFixed(1)+'" r="4" fill="'+colB+'" stroke="#111827" stroke-width="1.5"/>';
-
-    // Value labels next to dots
+    var pA=pctsA[i],pB=pctsB[i];
     var ang=startA+i*step;
-    var anchor=Math.cos(ang)>0.15?'start':Math.cos(ang)<-0.15?'end':'middle';
     var lp=pt(R_LABEL,i);
+    var anchor=Math.cos(ang)>0.2?'start':Math.cos(ang)<-0.2?'end':'middle';
+    // Posun aby popisky byly čitelné
+    var dy = Math.sin(ang)>0.5?14:Math.sin(ang)<-0.5?-6:4;
 
-    // Stat label
-    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]-2).toFixed(1)+'" text-anchor="'+anchor+'" font-size="10" font-weight="600" fill="rgba(255,255,255,0.85)" font-family="system-ui">'+stat.label+'</text>';
-    // A value (green)
-    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+11).toFixed(1)+'" text-anchor="'+anchor+'" font-size="9" fill="'+colA+'" font-family="system-ui" font-weight="600">'+pA+'</text>';
-    // B value (blue) next to A
-    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+22).toFixed(1)+'" text-anchor="'+anchor+'" font-size="9" fill="'+colB+'" font-family="system-ui" font-weight="600">'+pB+'</text>';
+    // Název statistiky
+    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+dy).toFixed(1)+'" text-anchor="'+anchor+'" font-size="11" font-weight="600" fill="#1e293b" font-family="system-ui">'+stat.label+'</text>';
+    // Percentily — zelená / modrá vedle sebe
+    var py=lp[1]+dy+13;
+    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+py.toFixed(1)+'" text-anchor="'+anchor+'" font-size="10" font-weight="700" fill="'+colA+'" font-family="system-ui">'+pA+'</text>';
+    // Oddělovač
+    var sepX = anchor==='start' ? lp[0]+14 : anchor==='end' ? lp[0]-14 : lp[0];
+    svg+='<text x="'+sepX.toFixed(1)+'" y="'+py.toFixed(1)+'" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="system-ui"> / </text>';
+    var bOffX = anchor==='start' ? 28 : anchor==='end' ? -28 : 0;
+    svg+='<text x="'+(lp[0]+bOffX).toFixed(1)+'" y="'+py.toFixed(1)+'" text-anchor="'+anchor+'" font-size="10" font-weight="700" fill="'+colB+'" font-family="system-ui">'+pB+'</text>';
   });
 
-  // Center dot
-  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="4" fill="rgba(255,255,255,0.3)"/>';
+  // Střed
+  svg+='<circle cx="'+CX+'" cy="'+CY+'" r="6" fill="rgba(255,255,255,0.15)"/>';
 
   svg+='</svg>';
 
-  // Legend with photos
-  var legendHtml='<div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px;flex-wrap:wrap">';
+  // Legenda s fotkami
+  var legendHtml='<div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px;flex-wrap:wrap">';
   [[a,colA],[b,colB]].forEach(function(item){
     var p=item[0],col=item[1];
     var av='';
     if(p.photo) av='<img src="'+p.photo+'" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid '+col+'">';
-    else av='<div style="width:32px;height:32px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">'+p.name[0]+'</div>';
-    legendHtml+='<div style="display:flex;align-items:center;gap:8px;background:white;border:1.5px solid '+col+';border-radius:8px;padding:6px 12px">'
-      +av
-      +'<div><div style="font-size:12px;font-weight:700;color:'+col+'">'+p.name+'</div>'
-      +'<div style="font-size:10px;color:#9ca3af">Percentily</div></div></div>';
+    else av='<div style="width:32px;height:32px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white">'+p.name[0]+'</div>';
+    legendHtml+='<div style="display:flex;align-items:center;gap:8px;background:white;border:2px solid '+col+';border-radius:10px;padding:7px 14px">'
+      +av+'<div>'
+      +'<div style="font-size:12px;font-weight:700;color:'+col+'">'+p.name+'</div>'
+      +'<div style="font-size:10px;color:#94a3b8">Percentil v lize</div>'
+      +'</div></div>';
   });
   legendHtml+='</div>';
 
