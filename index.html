@@ -1814,5 +1814,22 @@ function setView(v){
 
 loadData();
 </script>
+<!-- Auth Modal -->
+<div id="auth-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:16px;padding:32px;width:340px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h2 style="font-size:18px;font-weight:800" id="auth-modal-title">Přihlásit se</h2>
+      <button onclick="closeAuthModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999">×</button>
+    </div>
+    <div style="display:flex;gap:0;margin-bottom:20px;border:1.5px solid #e5e7eb;border-radius:8px;overflow:hidden">
+      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:8px;border:none;background:#3ab54a;color:white;font-weight:600;cursor:pointer;font-size:13px">Přihlásit</button>
+      <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:8px;border:none;background:white;color:#666;font-weight:600;cursor:pointer;font-size:13px">Registrovat</button>
+    </div>
+    <input id="auth-email" type="email" placeholder="Email" class="inp" style="width:100%;margin-bottom:10px">
+    <input id="auth-password" type="password" placeholder="Heslo" class="inp" style="width:100%;margin-bottom:16px">
+    <button id="auth-submit" onclick="submitAuth()" class="btn primary" style="width:100%;padding:12px;font-size:14px">Přihlásit se</button>
+    <div id="auth-msg" style="margin-top:12px;font-size:12px;text-align:center;color:#dc2626"></div>
+  </div>
+</div>
 </body>
 </html>
