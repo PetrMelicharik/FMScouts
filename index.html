@@ -736,36 +736,45 @@ function submitAuth(){
 // Shortlist DB functions
 function loadShortlistFromDB(){
   if(!authToken)return;
-  sbAuthed('shortlists','select=player_id,team_id','GET')
-    .then(function(r){return r&&r.json?r.json():r;})
+  fetch(SUPABASE_URL+'/rest/v1/shortlists?select=player_id,team_id',{
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+authToken}
+  }).then(function(r){return r.json();})
     .then(function(data){
       if(Array.isArray(data)){
+        // Nahraď lokální shortlist daty z DB
         shortlist=data.map(function(d){return{id:d.player_id,teamId:d.team_id};});
-        renderShortlist();
-        // Update star buttons
+        saveShortlist(); // ulož do localStorage také
+        // Aktualizuj hvězdičky
         document.querySelectorAll('.star-btn').forEach(function(btn){
           var pid=parseInt(btn.dataset.pid);
           btn.classList.toggle('active',isInShortlist(pid));
         });
+        renderShortlist();
       }
-    });
+    }).catch(function(e){console.log('DB shortlist error:',e);});
 }
 
 function syncShortlistToDB(add, playerId, teamId){
   if(!authToken)return;
   if(add){
-    sbAuthed('shortlists',null,'POST',null).then(function(){}).catch(function(){});
-    // Use upsert
     fetch(SUPABASE_URL+'/rest/v1/shortlists',{
       method:'POST',
-      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+authToken,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
-      body:JSON.stringify({player_id:playerId,team_id:teamId})
-    });
+      headers:{
+        'apikey':SUPABASE_KEY,
+        'Authorization':'Bearer '+authToken,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates'
+      },
+      body:JSON.stringify({player_id:playerId,team_id:teamId||null})
+    }).catch(function(e){console.log('Add shortlist error:',e);});
   } else {
     fetch(SUPABASE_URL+'/rest/v1/shortlists?player_id=eq.'+playerId,{
       method:'DELETE',
-      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+authToken}
-    });
+      headers:{
+        'apikey':SUPABASE_KEY,
+        'Authorization':'Bearer '+authToken
+      }
+    }).catch(function(e){console.log('Remove shortlist error:',e);});
   }
 }
 
