@@ -148,6 +148,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <div class="logo-sub">Scouting platforma</div>
     </div>
   </div>
+  <div style="padding:8px 16px 10px;border-bottom:1px solid rgba(255,255,255,0.07)">
+    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="auth-user"></div>
+    <button id="auth-login-btn" onclick="openAuthModal()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;width:100%;font-weight:500">Přihlásit se</button>
+  </div>
   <div class="nav-sec">Přehled</div>
   <button class="nav-btn active" id="nv-players" onclick="setView('players');closeMobileMenu()">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
