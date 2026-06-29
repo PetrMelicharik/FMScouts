@@ -328,11 +328,10 @@ function toggleShortlist(id,teamId){
   if(!adding){
     shortlist=shortlist.filter(function(s){return s.id!=id;});
   } else {
-    var p=players.find(function(p){return p.id==id&&p.teamId==teamId;});
-    if(p) shortlist.push({id:p.id,teamId:p.teamId});
+    shortlist.push({id:id,teamId:teamId});
   }
+  saveShortlist();
   if(currentUser) syncShortlistToDB(adding,id,teamId);
-  else saveShortlist();
   // Update all star buttons
   document.querySelectorAll('.star-btn[data-pid="'+id+'"]').forEach(function(btn){
     btn.classList.toggle('active',isInShortlist(id));
@@ -765,7 +764,7 @@ function syncShortlistToDB(add, playerId, teamId){
         'Content-Type':'application/json',
         'Prefer':'resolution=merge-duplicates'
       },
-      body:JSON.stringify({player_id:playerId,team_id:teamId||null})
+      body:JSON.stringify({player_id:playerId,team_id:teamId||null,user_id:currentUser.id})
     }).catch(function(e){console.log('Add shortlist error:',e);});
   } else {
     fetch(SUPABASE_URL+'/rest/v1/shortlists?player_id=eq.'+playerId,{
