@@ -320,13 +320,15 @@ function saveShortlist(){
 }
 function isInShortlist(id){return shortlist.some(function(s){return s.id==id;});}
 function toggleShortlist(id,teamId){
-  if(isInShortlist(id)){
+  var adding=!isInShortlist(id);
+  if(!adding){
     shortlist=shortlist.filter(function(s){return s.id!=id;});
   } else {
     var p=players.find(function(p){return p.id==id&&p.teamId==teamId;});
     if(p) shortlist.push({id:p.id,teamId:p.teamId});
   }
-  saveShortlist();
+  if(currentUser) syncShortlistToDB(adding,id,teamId);
+  else saveShortlist();
   // Update all star buttons
   document.querySelectorAll('.star-btn[data-pid="'+id+'"]').forEach(function(btn){
     btn.classList.toggle('active',isInShortlist(id));
@@ -429,6 +431,97 @@ function closeMobileMenu(){
 // Supabase
 var SUPABASE_URL = 'https://quhqfxhypuailolpvetx.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_n5hdolcBiiqAp1g4rBRmsA_nR-PGIxW';
+var currentUser = null;
+var authToken = null;
+
+function sbAuth(endpoint, body) {
+  return fetch(SUPABASE_URL + '/auth/v1/' + endpoint, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body: JSON.stringify(body)
+  }).then(function(r){return r.json();});
+}
+
+function sbAuthGet(endpoint) {
+  return fetch(SUPABASE_URL + '/auth/v1/' + endpoint, {
+    headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+(authToken||SUPABASE_KEY)}
+  }).then(function(r){return r.json();});
+}
+
+function sbAuthed(table, params, method, body) {
+  if(!authToken) return Promise.resolve(null);
+  var url = SUPABASE_URL+'/rest/v1/'+table;
+  if(params) url += '?'+Object.entries(params).map(function(e){return e[0]+'='+e[1];}).join('&');
+  var opts = {
+    method: method||'GET',
+    headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+authToken,'Content-Type':'application/json','Prefer':'return=minimal'}
+  };
+  if(body) opts.body = JSON.stringify(body);
+  return fetch(url, opts).then(function(r){return r.status===200||r.status===201||r.status===204?r:r.json();});
+}
+
+function login(email, password, callback) {
+  sbAuth('token?grant_type=password', {email:email, password:password})
+    .then(function(d){
+      if(d.access_token){
+        authToken = d.access_token;
+        currentUser = d.user;
+        localStorage.setItem('fm_token', authToken);
+        if(callback) callback(null, d.user);
+      } else {
+        if(callback) callback(d.error_description||d.msg||'Chyba přihlášení');
+      }
+    }).catch(function(e){if(callback) callback('Chyba sítě');});
+}
+
+function signup(email, password, callback) {
+  sbAuth('signup', {email:email, password:password})
+    .then(function(d){
+      if(d.id){
+        if(callback) callback(null, 'Zkontroluj email pro potvrzení registrace.');
+      } else {
+        if(callback) callback(d.error_description||d.msg||'Chyba registrace');
+      }
+    }).catch(function(e){if(callback) callback('Chyba sítě');});
+}
+
+function logout() {
+  authToken = null;
+  currentUser = null;
+  localStorage.removeItem('fm_token');
+  updateAuthUI();
+  // Reset shortlist to local
+  loadShortlist();
+  renderShortlist();
+}
+
+function updateAuthUI() {
+  var userEl = document.getElementById('auth-user');
+  var loginEl = document.getElementById('auth-login-btn');
+  if(currentUser) {
+    if(userEl) userEl.textContent = currentUser.email.split('@')[0];
+    if(loginEl) loginEl.textContent = 'Odhlásit';
+  } else {
+    if(userEl) userEl.textContent = '';
+    if(loginEl) loginEl.textContent = 'Přihlásit';
+  }
+}
+
+function tryRestoreSession() {
+  var token = localStorage.getItem('fm_token');
+  if(!token) return;
+  authToken = token;
+  sbAuthGet('user').then(function(d){
+    if(d.id) {
+      currentUser = d;
+      updateAuthUI();
+      loadShortlistFromDB();
+    } else {
+      authToken = null;
+      localStorage.removeItem('fm_token');
+    }
+  });
+}
 
 function sbGet(table, params) {
   var query = Object.entries(params).map(function(e){return e[0]+'='+e[1];}).join('&');
@@ -591,6 +684,87 @@ function playerCat(p){
 }
 function pos(p){return tm(p).position||PCS[p.position]||'—';}
 function posFull(p){return tm(p).position||(p.position?PCZK[p.position]||p.position:'—');}
+function openAuthModal(){
+  if(currentUser){logout();return;}
+  document.getElementById('auth-overlay').style.display='flex';
+  document.getElementById('auth-email').value='';
+  document.getElementById('auth-password').value='';
+  document.getElementById('auth-msg').textContent='';
+}
+function closeAuthModal(){
+  document.getElementById('auth-overlay').style.display='none';
+}
+var authTab='login';
+function switchAuthTab(tab){
+  authTab=tab;
+  document.getElementById('tab-login').style.background=tab==='login'?'#3ab54a':'white';
+  document.getElementById('tab-login').style.color=tab==='login'?'white':'#666';
+  document.getElementById('tab-signup').style.background=tab==='signup'?'#3ab54a':'white';
+  document.getElementById('tab-signup').style.color=tab==='signup'?'white':'#666';
+  document.getElementById('auth-submit').textContent=tab==='login'?'Přihlásit se':'Registrovat se';
+  document.getElementById('auth-modal-title').textContent=tab==='login'?'Přihlásit se':'Registrovat se';
+  document.getElementById('auth-msg').textContent='';
+}
+function submitAuth(){
+  var email=document.getElementById('auth-email').value.trim();
+  var password=document.getElementById('auth-password').value;
+  var msg=document.getElementById('auth-msg');
+  if(!email||!password){msg.textContent='Vyplň email a heslo.';return;}
+  msg.style.color='#666';
+  msg.textContent='Načítám...';
+  if(authTab==='login'){
+    login(email,password,function(err,user){
+      if(err){msg.style.color='#dc2626';msg.textContent=err;}
+      else{
+        closeAuthModal();
+        updateAuthUI();
+        loadShortlistFromDB();
+      }
+    });
+  } else {
+    signup(email,password,function(err,ok){
+      if(err){msg.style.color='#dc2626';msg.textContent=err;}
+      else{msg.style.color='#16a34a';msg.textContent=ok;}
+    });
+  }
+}
+
+// Shortlist DB functions
+function loadShortlistFromDB(){
+  if(!authToken)return;
+  sbAuthed('shortlists','select=player_id,team_id','GET')
+    .then(function(r){return r&&r.json?r.json():r;})
+    .then(function(data){
+      if(Array.isArray(data)){
+        shortlist=data.map(function(d){return{id:d.player_id,teamId:d.team_id};});
+        renderShortlist();
+        // Update star buttons
+        document.querySelectorAll('.star-btn').forEach(function(btn){
+          var pid=parseInt(btn.dataset.pid);
+          btn.classList.toggle('active',isInShortlist(pid));
+        });
+      }
+    });
+}
+
+function syncShortlistToDB(add, playerId, teamId){
+  if(!authToken)return;
+  if(add){
+    sbAuthed('shortlists',null,'POST',null).then(function(){}).catch(function(){});
+    // Use upsert
+    fetch(SUPABASE_URL+'/rest/v1/shortlists',{
+      method:'POST',
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+authToken,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({player_id:playerId,team_id:teamId})
+    });
+  } else {
+    fetch(SUPABASE_URL+'/rest/v1/shortlists?player_id=eq.'+playerId,{
+      method:'DELETE',
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+authToken}
+    });
+  }
+}
+
 function ini(n){return(n||'??').split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0]||'?';}).join('').toUpperCase();}
 function flag(nat){var c=FL[nat];return c?'<img src="https://flagcdn.com/16x12/'+c+'.png" width="16" height="12" style="border-radius:2px;vertical-align:middle;margin-right:3px" alt="">'  :'';}
 function ll(p){var n=LN[p.leagueId]||p.leagueName||'';var c=CN[p.country]||'';return c?n+' ('+c+')':n;}
