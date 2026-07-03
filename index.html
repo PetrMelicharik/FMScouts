@@ -766,20 +766,22 @@ function submitAuth(){
 // Shortlist DB functions
 function loadShortlistFromDB(){
   if(!authToken)return;
+  var localBefore=shortlist.slice(); // guest shortlist před přepsáním daty z účtu
   fetch(SUPABASE_URL+'/rest/v1/shortlists?select=player_id,team_id',{
     headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+authToken}
   }).then(function(r){return r.json();})
     .then(function(data){
       if(Array.isArray(data)){
-        var dbList=data.map(function(d){return{id:d.player_id,teamId:d.team_id};});
-        // Sluč s aktuálním lokálním seznamem — nic nepřepisuj, jen doplň
-        loadShortlist();
-        var dbHas=function(id,teamId){return dbList.some(function(s){return s.id==id&&s.teamId==teamId;});};
-        var localOnly=shortlist.filter(function(s){return !dbHas(s.id,s.teamId);});
-        // Položky, které jsou jen lokálně (přidané např. bez platné session), dopiš do DB
-        localOnly.forEach(function(s){syncShortlistToDB(true,s.id,s.teamId);});
-        shortlist=dbList.concat(localOnly);
-        saveShortlist(); // ulož sloučený výsledek i do localStorage
+        // Shortlist účtu je oddělený od lokálního (guest) shortlistu.
+        // Přihlášení vždy zobrazí přesně to, co je uložené v účtu — bez slučování.
+        shortlist=data.map(function(d){return{id:d.player_id,teamId:d.team_id};});
+        saveShortlist();
+        var discarded=localBefore.filter(function(s){
+          return !shortlist.some(function(x){return x.id==s.id&&x.teamId==s.teamId;});
+        });
+        if(discarded.length){
+          alert('Přihlášením se shortlist nahradil daty z účtu. '+discarded.length+' hráč(ů) přidaných bez přihlášení bylo nahrazeno.');
+        }
         // Aktualizuj hvězdičky
         document.querySelectorAll('.star-btn').forEach(function(btn){
           var pid=parseInt(btn.dataset.pid);
