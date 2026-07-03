@@ -467,6 +467,8 @@ var SUPABASE_URL = 'https://quhqfxhypuailolpvetx.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_n5hdolcBiiqAp1g4rBRmsA_nR-PGIxW';
 var currentUser = null;
 var authToken = null;
+var refreshToken = null;
+var tokenRefreshInterval = null;
 
 function sbAuth(endpoint, body) {
   return fetch(SUPABASE_URL + '/auth/v1/' + endpoint, {
@@ -474,6 +476,35 @@ function sbAuth(endpoint, body) {
     headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY},
     body: JSON.stringify(body)
   }).then(function(r){return r.json();});
+}
+
+// Access token má u Supabase typicky platnost jen ~1 hodinu. Bez obnovy by po
+// vypršení tiše přestaly procházet všechny zápisy (shortlist apod.), aniž by
+// si toho appka nebo uživatel všimli. refreshSession() vymění refresh_token
+// za nový access_token; startTokenRefreshTimer() to dělá preventivně, ať
+// token nikdy nestihne vypršet uprostřed používání appky.
+function refreshSession(callback){
+  var rt = refreshToken || localStorage.getItem('fm_refresh_token');
+  if(!rt){ if(callback) callback(false); return; }
+  sbAuth('token?grant_type=refresh_token', {refresh_token: rt})
+    .then(function(d){
+      if(d.access_token){
+        authToken = d.access_token;
+        refreshToken = d.refresh_token || rt;
+        localStorage.setItem('fm_token', authToken);
+        localStorage.setItem('fm_refresh_token', refreshToken);
+        if(callback) callback(true);
+      } else {
+        if(callback) callback(false);
+      }
+    }).catch(function(){ if(callback) callback(false); });
+}
+
+function startTokenRefreshTimer(){
+  if(tokenRefreshInterval) clearInterval(tokenRefreshInterval);
+  tokenRefreshInterval=setInterval(function(){
+    if(authToken) refreshSession(function(){});
+  }, 45*60*1000); // obnov každých 45 minut — dřív, než typicky vyprší hodinová platnost
 }
 
 function sbAuthGet(endpoint) {
@@ -499,8 +530,11 @@ function login(email, password, callback) {
     .then(function(d){
       if(d.access_token){
         authToken = d.access_token;
+        refreshToken = d.refresh_token;
         currentUser = d.user;
         localStorage.setItem('fm_token', authToken);
+        localStorage.setItem('fm_refresh_token', refreshToken);
+        startTokenRefreshTimer();
         if(callback) callback(null, d.user);
       } else {
         if(callback) callback(d.error_description||d.msg||'Chyba přihlášení');
@@ -521,8 +555,11 @@ function signup(email, password, callback) {
 
 function logout() {
   authToken = null;
+  refreshToken = null;
   currentUser = null;
   localStorage.removeItem('fm_token');
+  localStorage.removeItem('fm_refresh_token');
+  if(tokenRefreshInterval){clearInterval(tokenRefreshInterval);tokenRefreshInterval=null;}
   updateAuthUI();
   // Reset shortlist to local
   loadShortlist();
@@ -543,16 +580,35 @@ function updateAuthUI() {
 
 function tryRestoreSession() {
   var token = localStorage.getItem('fm_token');
+  var rtoken = localStorage.getItem('fm_refresh_token');
   if(!token) return;
   authToken = token;
+  refreshToken = rtoken || null;
   sbAuthGet('user').then(function(d){
     if(d.id) {
       currentUser = d;
       updateAuthUI();
       loadShortlistFromDB();
+      startTokenRefreshTimer();
     } else {
-      authToken = null;
-      localStorage.removeItem('fm_token');
+      // Access token možná jen mezitím vypršel — zkus ho obnovit dřív, než uživatele odhlásíme
+      refreshSession(function(ok){
+        if(ok){
+          sbAuthGet('user').then(function(d2){
+            if(d2.id){
+              currentUser=d2;
+              updateAuthUI();
+              loadShortlistFromDB();
+              startTokenRefreshTimer();
+            }
+          });
+        } else {
+          authToken = null;
+          refreshToken = null;
+          localStorage.removeItem('fm_token');
+          localStorage.removeItem('fm_refresh_token');
+        }
+      });
     }
   });
 }
@@ -769,7 +825,14 @@ function loadShortlistFromDB(){
   var localBefore=shortlist.slice(); // guest shortlist před přepsáním daty z účtu
   fetch(SUPABASE_URL+'/rest/v1/shortlists?select=player_id,team_id',{
     headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+authToken}
-  }).then(function(r){return r.json();})
+  }).then(function(r){
+      if(r.status===401){
+        // Token vypršel — zkus obnovit a načíst znovu, místo tichého selhání
+        refreshSession(function(ok){ if(ok) loadShortlistFromDB(); });
+        return null;
+      }
+      return r.json();
+    })
     .then(function(data){
       if(Array.isArray(data)){
         // Shortlist účtu je oddělený od lokálního (guest) shortlistu.
@@ -792,7 +855,7 @@ function loadShortlistFromDB(){
     }).catch(function(e){console.log('DB shortlist error:',e);});
 }
 
-function syncShortlistToDB(add, playerId, teamId){
+function syncShortlistToDB(add, playerId, teamId, isRetry){
   if(!authToken)return;
   if(add){
     fetch(SUPABASE_URL+'/rest/v1/shortlists',{
@@ -804,6 +867,13 @@ function syncShortlistToDB(add, playerId, teamId){
         'Prefer':'resolution=merge-duplicates'
       },
       body:JSON.stringify({player_id:playerId,team_id:teamId||null,user_id:currentUser.id})
+    }).then(function(r){
+      if(r.status===401&&!isRetry){
+        // Token vypršel uprostřed přidávání — obnov ho a zkus to znovu, ať se hráč neztratí
+        refreshSession(function(ok){ if(ok) syncShortlistToDB(add,playerId,teamId,true); });
+      } else if(!r.ok){
+        console.log('Add shortlist error: HTTP '+r.status);
+      }
     }).catch(function(e){console.log('Add shortlist error:',e);});
   } else {
     fetch(SUPABASE_URL+'/rest/v1/shortlists?player_id=eq.'+playerId,{
@@ -811,6 +881,12 @@ function syncShortlistToDB(add, playerId, teamId){
       headers:{
         'apikey':SUPABASE_KEY,
         'Authorization':'Bearer '+authToken
+      }
+    }).then(function(r){
+      if(r.status===401&&!isRetry){
+        refreshSession(function(ok){ if(ok) syncShortlistToDB(add,playerId,teamId,true); });
+      } else if(!r.ok){
+        console.log('Remove shortlist error: HTTP '+r.status);
       }
     }).catch(function(e){console.log('Remove shortlist error:',e);});
   }
