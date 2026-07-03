@@ -771,9 +771,15 @@ function loadShortlistFromDB(){
   }).then(function(r){return r.json();})
     .then(function(data){
       if(Array.isArray(data)){
-        // Nahraď lokální shortlist daty z DB
-        shortlist=data.map(function(d){return{id:d.player_id,teamId:d.team_id};});
-        saveShortlist(); // ulož do localStorage také
+        var dbList=data.map(function(d){return{id:d.player_id,teamId:d.team_id};});
+        // Sluč s aktuálním lokálním seznamem — nic nepřepisuj, jen doplň
+        loadShortlist();
+        var dbHas=function(id,teamId){return dbList.some(function(s){return s.id==id&&s.teamId==teamId;});};
+        var localOnly=shortlist.filter(function(s){return !dbHas(s.id,s.teamId);});
+        // Položky, které jsou jen lokálně (přidané např. bez platné session), dopiš do DB
+        localOnly.forEach(function(s){syncShortlistToDB(true,s.id,s.teamId);});
+        shortlist=dbList.concat(localOnly);
+        saveShortlist(); // ulož sloučený výsledek i do localStorage
         // Aktualizuj hvězdičky
         document.querySelectorAll('.star-btn').forEach(function(btn){
           var pid=parseInt(btn.dataset.pid);
@@ -2023,7 +2029,9 @@ function setView(v){
   if(v==='graphs')renderScatter();
 }
 
+loadShortlist();
 loadData();
+tryRestoreSession();
 </script>
 <!-- Auth Modal -->
 <div id="auth-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center">
