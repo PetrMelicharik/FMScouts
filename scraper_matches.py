@@ -2,6 +2,9 @@
 FMScouts — Scraper zápasů a per-zápasových statistik
 Ukládá data do Supabase databáze.
 Spouštět každé pondělí (po víkendu) nebo manuálně.
+
+Aktuální sezóna se zjišťuje přímo z API-Football (spolehlivější než odhad podle
+data), s fallbackem na starý odhad podle měsíce, pokud by API selhalo.
 """
 
 import requests
@@ -45,7 +48,8 @@ SPRING_FALL_LEAGUES = [l for l in ALL_LEAGUES if l["season_type"] == "spring_fal
 LEAGUES_MODE = os.environ.get("LEAGUES_MODE", "all")
 LEAGUES = SPRING_FALL_LEAGUES if LEAGUES_MODE == "spring_fall" else ALL_LEAGUES
 
-def current_season(season_type):
+def estimate_season_by_date(season_type):
+    """Starý odhad podle měsíce — používá se jen jako fallback, pokud selže dotaz na API."""
     now = datetime.utcnow()
     year = now.year
     if season_type == "spring_fall":
@@ -64,6 +68,23 @@ def api_get(endpoint, params={}):
         return api_get(endpoint, params)
     r.raise_for_status()
     return r.json().get("response", [])
+
+def get_current_season(league_id, season_type):
+    """
+    Zjistí aktuální sezónu přímo z API-Football (endpoint /leagues vrací u každé
+    sezóny příznak "current": true) — spolehlivější než odhad podle data, který
+    selhává na přelomu sezón. Pokud dotaz selže, spadne zpět na odhad podle měsíce.
+    """
+    try:
+        resp = api_get("leagues", {"id": league_id})
+        if resp:
+            seasons = resp[0].get("seasons", [])
+            for s in seasons:
+                if s.get("current"):
+                    return s.get("year")
+    except Exception as e:
+        print(f"  ⚠ Nepodařilo se zjistit aktuální sezónu z API ({e}), používám odhad podle data.")
+    return estimate_season_by_date(season_type)
 
 # ── Supabase ───────────────────────────────────────────────────────────────────
 
@@ -131,14 +152,23 @@ def fetch_fixture_players(fixture_id):
 
 def process_league(league, existing_ids, full_season=False):
     lid    = league["id"]
-    season = current_season(league["season_type"])
+    season = get_current_season(lid, league["season_type"])
     lname  = league["name"]
     print(f"\n  {lname} (sezóna {season})")
 
     fixtures = fetch_fixtures(lid, season, full_season=full_season)
+
     if not fixtures:
-        print(f"    Žádné nové zápasy")
-        return 0, 0
+        # Sezóna zjištěná z API ještě nemá žádné odehrané zápasy (typicky těsně
+        # po přelomu sezóny) — zkus předchozí sezónu jako fallback.
+        fallback = season - 1
+        print(f"    ↺ 0 zápasů pro sezónu {season}, zkouším {fallback}...")
+        fixtures = fetch_fixtures(lid, fallback, full_season=full_season)
+        if fixtures:
+            season = fallback
+        else:
+            print(f"    Žádné nové zápasy")
+            return 0, 0
 
     new_fixtures = [f for f in fixtures if f["fixture"]["id"] not in existing_ids]
     print(f"    Zápasů celkem: {len(fixtures)}, nových: {len(new_fixtures)}")

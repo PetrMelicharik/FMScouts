@@ -1,7 +1,8 @@
 """
 FMScouts Scraper — API-Football
 Stahuje hráče a statistiky ze všech lig.
-Každá liga má správně nastavenou aktuální sezónu.
+Aktuální sezóna se zjišťuje přímo z API-Football (spolehlivější než odhad podle data),
+s fallbackem na starý odhad podle měsíce, pokud by API selhalo.
 """
 
 import requests
@@ -54,16 +55,13 @@ LEAGUES = [
     {"id": 333, "name": "Ukrajina (1. liga)",     "country": "Ukraine",     "tier": 1, "season_type": "fall_spring"},
 ]
 
-def current_season(season_type):
-    """Vrátí aktuální sezónu podle typu ligy."""
+def estimate_season_by_date(season_type):
+    """Starý odhad podle měsíce — používá se jen jako fallback, pokud selže dotaz na API."""
     now = datetime.utcnow()
     year = now.year
     if season_type == "spring_fall":
-        # Jaro-podzim: sezóna = aktuální rok (2026)
         return year
     else:
-        # Podzim-jaro: sezóna začala loni (2025/26 → season = 2025)
-        # Pokud jsme po červenci, sezóna začala letos, jinak loni
         if now.month >= 7:
             return year
         else:
@@ -84,24 +82,32 @@ def get(endpoint, params={}):
     r.raise_for_status()
     return r.json().get("response", [])
 
-def scrape_league(league):
-    lid    = league["id"]
-    season = current_season(league["season_type"])
-    print(f"\n{'='*50}")
-    print(f"  {league['name']} (ID:{lid} Sezóna:{season})")
-    print(f"{'='*50}")
+def get_current_season(league_id, season_type):
+    """
+    Zjistí aktuální sezónu přímo z API-Football (endpoint /leagues vrací u každé
+    sezóny příznak "current": true) — spolehlivější než odhad podle data, který
+    selhává na přelomu sezón (nová sezóna existuje jako záznam, ale ještě nemá
+    žádné odehrané zápasy/statistiky).
+    Pokud dotaz selže nebo API neoznačí žádnou sezónu jako aktuální, spadne
+    zpět na starý odhad podle měsíce.
+    """
+    try:
+        resp = get("leagues", {"id": league_id})
+        if resp:
+            seasons = resp[0].get("seasons", [])
+            for s in seasons:
+                if s.get("current"):
+                    return s.get("year")
+    except Exception as e:
+        print(f"  ⚠ Nepodařilo se zjistit aktuální sezónu z API ({e}), používám odhad podle data.")
+    return estimate_season_by_date(season_type)
 
+def scrape_teams_players(lid, season, league):
+    """Stáhne týmy a hráče pro danou ligu a konkrétní sezónu.
+    Vrátí None, pokud liga v dané sezóně vůbec nemá žádné týmy."""
     teams = get("teams", {"league": lid, "season": season})
     if not teams:
-        # Zkus předchozí sezónu jako fallback
-        fallback = season - 1
-        print(f"  ↺ Žádné týmy pro {season}, zkouším {fallback}...")
-        teams = get("teams", {"league": lid, "season": fallback})
-        if teams:
-            season = fallback
-        else:
-            print(f"  ✗ Žádné týmy nenalezeny")
-            return []
+        return None
 
     print(f"  Týmy: {len(teams)}, Sezóna: {season}")
     all_players = []
@@ -186,7 +192,37 @@ def scrape_league(league):
         print(f"✓ {len(team_players)} hráčů")
         all_players.extend(team_players)
 
-    print(f"\n  Liga hotova: {len(all_players)} hráčů")
+    return all_players
+
+def scrape_league(league):
+    lid = league["id"]
+    season = get_current_season(lid, league["season_type"])
+    print(f"\n{'='*50}")
+    print(f"  {league['name']} (ID:{lid} Sezóna:{season})")
+    print(f"{'='*50}")
+
+    all_players = scrape_teams_players(lid, season, league)
+
+    if all_players is None:
+        # Žádné týmy vůbec pro tuto sezónu — zkus předchozí
+        fallback = season - 1
+        print(f"  ↺ Žádné týmy pro {season}, zkouším {fallback}...")
+        all_players = scrape_teams_players(lid, fallback, league)
+        if all_players is None:
+            print(f"  ✗ Žádné týmy nenalezeny")
+            return []
+        season = fallback
+
+    elif len(all_players) == 0:
+        # Týmy existují, ale bez jediné statistiky — nová sezóna typicky ještě nezačala
+        fallback = season - 1
+        print(f"  ↺ 0 hráčů se statistikami pro sezónu {season} (pravděpodobně ještě nezačala), zkouším {fallback}...")
+        fallback_players = scrape_teams_players(lid, fallback, league)
+        if fallback_players:
+            all_players = fallback_players
+            season = fallback
+
+    print(f"\n  Liga hotova: {len(all_players)} hráčů (sezóna {season})")
     return all_players
 
 def save(players, leagues_done):
@@ -206,9 +242,7 @@ def main():
     print(f"\n{'#'*50}")
     print(f"  FMScouts Scraper — {now.strftime('%Y-%m-%d %H:%M UTC')}")
     print(f"  Lig: {len(LEAGUES)}")
-    print(f"  Aktuální sezóny:")
-    print(f"    Jaro-podzim (NO, SE, FI, DK...): {current_season('spring_fall')}")
-    print(f"    Podzim-jaro (CZ, SK, PL...):     {current_season('fall_spring')}")
+    print(f"  Sezóna se zjišťuje přímo z API-Football (s fallbackem na odhad podle data)")
     print(f"{'#'*50}\n")
 
     if not API_KEY:
@@ -220,13 +254,14 @@ def main():
 
     for league in LEAGUES:
         players = scrape_league(league)
+        used_season = players[0]["season"] if players else get_current_season(league["id"], league["season_type"])
         all_players.extend(players)
         leagues_done.append({
             "id":      league["id"],
             "name":    league["name"],
             "country": league["country"],
             "tier":    league["tier"],
-            "season":  current_season(league["season_type"]),
+            "season":  used_season,
             "players": len(players),
         })
         save(all_players, leagues_done)
