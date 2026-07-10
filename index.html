@@ -759,6 +759,17 @@ function leagueLogo(p,size){
   return '<img src="https://media.api-sports.io/football/leagues/'+p.leagueId+'.png" width="'+size+'" height="'+size+'" style="display:inline-block;object-fit:contain;vertical-align:middle;flex-shrink:0;min-width:'+size+'px">';
 }
 function fmtHeight(v){if(!v)return '—';v=String(v).trim();return v.includes('cm')?v:v+' cm';}
+function fullName(p){
+  var fn=(p.firstname||'').trim(), ln=(p.lastname||'').trim();
+  if(fn&&ln) return fn+' '+ln;
+  return p.name||'—';
+}
+function fmtBirthDate(v){
+  if(!v) return null;
+  var d=new Date(v);
+  if(isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric',year:'numeric'});
+}
 function fmtWeight(v){if(!v)return '—';v=String(v).trim();return v.includes('kg')?v:v+' kg';}
 
 // Mapování TM pozic na API-Football kategorie
@@ -1072,7 +1083,7 @@ function openPlayer(id,teamId){
   var mav=document.getElementById('m-av');
   mav.innerHTML='';
   mav.appendChild(makeAv(p.photo,col,p.name,54));
-  document.getElementById('m-name').textContent=p.name;
+  document.getElementById('m-name').textContent=fullName(p);
   document.getElementById('m-sub').innerHTML='<span class="badge bp">'+(tm(p).position||PCS[p.position]||'—')+'</span> '+teamLogo(p,20)+' <strong>'+(p.teamName||'—')+'</strong>';
   var inC=cmpList.some(function(c){return c.id==p.id&&c.teamId==p.teamId;});
   var btn=document.getElementById('m-btn');
@@ -1080,9 +1091,11 @@ function openPlayer(id,teamId){
   btn.className='btn'+(inC?'':' primary');
   btn.onclick=function(){toggleCmp(p.id,p.teamId);};
 
+  var birthStr=fmtBirthDate(p.birthDate);
   var body='<div class="igrid">'
     +'<div class="icell"><div class="ilbl">Pozice</div><div class="ival">'+(tm(p).position||(PCZK[p.position]||'—'))+'</div></div>'
     +'<div class="icell"><div class="ilbl">Věk</div><div class="ival">'+(p.age||'—')+' let</div></div>'
+    +'<div class="icell"><div class="ilbl">Datum narození</div><div class="ival">'+(birthStr||'—')+'</div></div>'
     +'<div class="icell"><div class="ilbl">Národnost</div><div class="ival">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
     +'<div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">'+(fmtHeight(p.height))+(p.weight?' / '+fmtWeight(p.weight):'')+'</div></div>'
     +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival" style="display:flex;align-items:center;gap:6px">'+teamLogo(p,22)+'<span>'+(p.teamName||'—')+'</span></div></div>'
