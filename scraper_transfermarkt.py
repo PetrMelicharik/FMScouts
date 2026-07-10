@@ -3,6 +3,13 @@ FMScouts — Transfermarkt scraper
 Stahuje: přesnou pozici, tržní hodnotu, délku smlouvy
 Spouštět jednou měsíčně.
 Výsledky ukládá do data/tm_data.json
+
+Kromě čitelného textu data smlouvy (contractUntil) se snaží dopočítat i
+strojově čitelné datum (contractUntilDate, formát YYYY-MM-DD), aby podle
+smlouvy šlo v appce spolehlivě řadit. Pokud se text nepodaří rozpoznat
+(neznámý formát/jazyk), contractUntilDate zůstane prázdné — appka pak
+takového hráče při řazení podle smlouvy zařadí na konec, místo aby řazení
+spadlo na chybu.
 """
 
 import requests
@@ -21,6 +28,22 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
 ]
+
+# Názvy měsíců, se kterými se lze na Transfermarktu (podle jazyka stránky) setkat.
+MONTH_NAMES = {
+    # čeština
+    "leden": 1, "únor": 2, "brezen": 3, "březen": 3, "duben": 4, "kveten": 5, "květen": 5,
+    "cerven": 6, "červen": 6, "cervenec": 7, "červenec": 7, "srpen": 8,
+    "zari": 9, "září": 9, "rijen": 10, "říjen": 10, "listopad": 11, "prosinec": 12,
+    # angličtina
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "jun": 6, "jul": 7, "aug": 8,
+    "sep": 9, "sept": 9, "oct": 10, "nov": 11, "dec": 12,
+    # němčina (Transfermarkt je německý web, tohle se objevuje nejčastěji)
+    "januar": 1, "februar": 2, "märz": 3, "marz": 3, "mai": 5, "juni": 6, "juli": 7,
+    "oktober": 10, "dezember": 12,
+}
 
 def get_headers():
     return {
@@ -65,6 +88,50 @@ def search_player(name, team, session):
     
     return None
 
+def parse_contract_date(raw):
+    """
+    Zkusí převést volný text data smlouvy (různé jazyky/formáty z Transfermarktu)
+    na strojově čitelné ISO datum YYYY-MM-DD. Vrátí None, pokud formát nerozpozná.
+    """
+    if not raw:
+        return None
+    raw = raw.strip()
+
+    # Formát DD.MM.YYYY nebo DD/MM/YYYY
+    m = re.match(r'^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})$', raw)
+    if m:
+        day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        try:
+            return datetime(year, month, day).strftime("%Y-%m-%d")
+        except ValueError:
+            return None
+
+    # Formát "30. červen 2027" / "30 June 2027" / "30. Juni 2027" (den před měsícem)
+    m = re.search(r'(\d{1,2})\.?\s+([A-Za-zÁ-Žá-ž]+)\.?,?\s+(\d{4})', raw)
+    if m:
+        day = int(m.group(1))
+        month = MONTH_NAMES.get(m.group(2).lower())
+        year = int(m.group(3))
+        if month:
+            try:
+                return datetime(year, month, day).strftime("%Y-%m-%d")
+            except ValueError:
+                return None
+
+    # Formát "June 30, 2027" (měsíc před dnem)
+    m = re.search(r'([A-Za-zÁ-Žá-ž]+)\.?\s+(\d{1,2}),?\s+(\d{4})', raw)
+    if m:
+        month = MONTH_NAMES.get(m.group(1).lower())
+        day = int(m.group(2))
+        year = int(m.group(3))
+        if month:
+            try:
+                return datetime(year, month, day).strftime("%Y-%m-%d")
+            except ValueError:
+                return None
+
+    return None
+
 def parse_player_page(html):
     """Parsuje profil hráče na Transfermarktu."""
     result = {}
@@ -89,6 +156,9 @@ def parse_player_page(html):
         contract = re.search(r'(\d{1,2}\.\s*(?:leden|únor|březen|duben|květen|červen|červenec|srpen|září|říjen|listopadu|prosinec|\w+)\s*\d{4})', html)
     if contract:
         result['contractUntil'] = contract.group(1).strip()
+        parsed = parse_contract_date(result['contractUntil'])
+        if parsed:
+            result['contractUntilDate'] = parsed
 
     return result
 

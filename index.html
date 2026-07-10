@@ -213,6 +213,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <option value="name">Jméno A–Z</option>
         <option value="age_asc">Věk ↑</option>
         <option value="age_desc">Věk ↓</option>
+        <option value="contract_asc">Smlouva vyprší brzy</option>
+        <option value="contract_desc">Smlouva vyprší pozdě</option>
       </select>
       <input class="inp" type="number" id="fage_min" placeholder="Věk od" min="15" max="45" style="width:90px" oninput="renderPlayers()">
       <input class="inp" type="number" id="fage_max" placeholder="Věk do" min="15" max="45" style="width:90px" oninput="renderPlayers()">
@@ -748,6 +750,12 @@ var FL={
 };
 
 function tm(p){return tmData[String(p.id)]||{};}
+function contractTs(p){
+  var d=tm(p).contractUntilDate;
+  if(!d) return null;
+  var t=new Date(d).getTime();
+  return isNaN(t)?null:t;
+}
 function teamLogo(p,size){
   if(!p||!p.teamId)return '';
   size=size||20;
@@ -995,6 +1003,20 @@ function getList(){
   else if(sort==='goals')list.sort(function(a,b){return(b.goals||0)-(a.goals||0);});
   else if(sort==='age_asc')list.sort(function(a,b){return(a.age||99)-(b.age||99);});
   else if(sort==='age_desc')list.sort(function(a,b){return(b.age||0)-(a.age||0);});
+  else if(sort==='contract_asc')list.sort(function(a,b){
+    var ta=contractTs(a),tb=contractTs(b);
+    if(ta===null&&tb===null)return 0;
+    if(ta===null)return 1;
+    if(tb===null)return -1;
+    return ta-tb;
+  });
+  else if(sort==='contract_desc')list.sort(function(a,b){
+    var ta=contractTs(a),tb=contractTs(b);
+    if(ta===null&&tb===null)return 0;
+    if(ta===null)return 1;
+    if(tb===null)return -1;
+    return tb-ta;
+  });
   else list.sort(function(a,b){return(a.name||'').localeCompare(b.name||'');});
   return list;
 }
