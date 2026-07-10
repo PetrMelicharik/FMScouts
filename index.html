@@ -1143,7 +1143,7 @@ function openPlayer(id,teamId){
     body+='<div class="no-stats">Statistiky pro tohoto hráče nejsou dostupné.</div>';
   }
 
-  if(p.appearances != null && (p.minutesPlayed||0) >= 90 && playerCat(p) !== 'Goalkeeper') {
+  if(p.appearances != null && (p.minutesPlayed||0) >= 90) {
     body += buildPizzaChart(p);
   }
   // Star button in modal header
@@ -1219,11 +1219,13 @@ var PIZZA_STATS = {
     {key:'yellowCards',   label:'Žluté karty',   group:'discipline',color:'#e9c46a'},
   ],
   Goalkeeper: [
+    {key:'saves',         label:'Zásahy',         group:'shotstopping',color:'#2563eb'},
+    {key:'goalsConceded', label:'Obdržené góly',  group:'shotstopping',color:'#dc2626', invert:true},
+    {key:'penaltySaved',  label:'Chyc. penalty',  group:'shotstopping',color:'#16a34a'},
+    {key:'passAccuracy',  label:'Přesnost přihr.',group:'passing',   color:'#2a9d8f', raw:true, unit:'%'},
     {key:'passes',        label:'Přihrávky',     group:'passing',   color:'#2a9d8f'},
     {key:'keyPasses',     label:'Klíč. přihr.',  group:'passing',   color:'#2a9d8f'},
-    {key:'duels',         label:'Duely',         group:'defensive', color:'#457b9d'},
     {key:'duelsWon',      label:'Duely vyhr.',   group:'defensive', color:'#457b9d'},
-    {key:'foulsCommitted',label:'Fauly',         group:'discipline',color:'#e9c46a'},
   ],
 };
 
@@ -1267,14 +1269,16 @@ function buildPizzaChart(p) {
 
   function calcPer90(q,key){var m=q.minutesPlayed||0;if(m<1)return 0;return((q[key]||0)/m)*90;}
   function calcPct(value,vals){if(!vals.length)return 0;var below=vals.filter(function(v){return v<=value;}).length;return Math.round(below/vals.length*100);}
+  function statVal(q,stat){return stat.raw?(q[stat.key]||0):calcPer90(q,stat.key);}
 
   var W=500,H=500,CX=250,CY=250,R_MIN=62,R_MAX=190,R_LABEL=212;
   var n=statDefs.length,step=(2*Math.PI)/n,startA=-Math.PI/2;
 
   var slices=statDefs.map(function(stat,i){
-    var val=calcPer90(p,stat.key);
-    var peerVals=peers.map(function(q){return calcPer90(q,stat.key);});
+    var val=statVal(p,stat);
+    var peerVals=peers.map(function(q){return statVal(q,stat);});
     var pct=calcPct(val,peerVals);
+    if(stat.invert) pct=100-pct;
     return{stat:stat,val:val,pct:pct,angle:startA+i*step};
   });
 
@@ -1329,7 +1333,7 @@ function buildPizzaChart(p) {
     var lp=pt(R_LABEL,s.angle);
     var anchor=Math.cos(s.angle)>0.15?'start':Math.cos(s.angle)<-0.15?'end':'middle';
     svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]-1).toFixed(1)+'" text-anchor="'+anchor+'" font-size="10.5" font-weight="600" fill="#374151" font-family="system-ui">'+s.stat.label+'</text>';
-    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+12).toFixed(1)+'" text-anchor="'+anchor+'" font-size="9.5" fill="'+col+'" font-family="system-ui">'+(s.val<0.01?'0.00':s.val.toFixed(2))+' /90</text>';
+    svg+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+12).toFixed(1)+'" text-anchor="'+anchor+'" font-size="9.5" fill="'+col+'" font-family="system-ui">'+(s.stat.raw?Math.round(s.val)+(s.stat.unit||''):(s.val<0.01?'0.00':s.val.toFixed(2))+' /90')+'</text>';
   });
 
   // Center white circle
@@ -1353,7 +1357,7 @@ function buildPizzaChart(p) {
   // Legend
   var groups={};
   statDefs.forEach(function(s){groups[s.group]=s.color;});
-  var gnames={passing:'Přihrávky',attacking:'Útočné',defensive:'Obranné',discipline:'Disciplína'};
+  var gnames={passing:'Přihrávky',attacking:'Útočné',defensive:'Obranné',discipline:'Disciplína',shotstopping:'Zákroky'};
   var legend='<div style="display:flex;gap:16px;justify-content:center;margin-top:10px;flex-wrap:wrap;">';
   Object.keys(groups).forEach(function(g){
     legend+='<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);font-weight:500">'
@@ -1490,17 +1494,20 @@ function buildComparePizza(a, b) {
 
   function p90(p,key){var m=p.minutesPlayed||0;if(m<1)return 0;return((p[key]||0)/m)*90;}
   function pct(val,vals){if(!vals.length)return 0;return Math.round(vals.filter(function(v){return v<=val;}).length/vals.length*100);}
+  function statVal(p,stat){return stat.raw?(p[stat.key]||0):p90(p,stat.key);}
 
   var W=640,H=640,CX=320,CY=320,R=175,R_LABEL=210;
   var n=statDefs.length,step=(2*Math.PI)/n,startA=-Math.PI/2;
 
   var pctsA=statDefs.map(function(stat){
-    var peerVals=peers.map(function(q){return p90(q,stat.key);});
-    return pct(p90(a,stat.key),peerVals);
+    var peerVals=peers.map(function(q){return statVal(q,stat);});
+    var v=pct(statVal(a,stat),peerVals);
+    return stat.invert?100-v:v;
   });
   var pctsB=statDefs.map(function(stat){
-    var peerVals=peers.map(function(q){return p90(q,stat.key);});
-    return pct(p90(b,stat.key),peerVals);
+    var peerVals=peers.map(function(q){return statVal(q,stat);});
+    var v=pct(statVal(b,stat),peerVals);
+    return stat.invert?100-v:v;
   });
 
   function pt(r,i){var a=startA+i*step;return[CX+r*Math.cos(a),CY+r*Math.sin(a)];}
