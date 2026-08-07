@@ -1,0 +1,40 @@
+name: Debug Candidate Leagues
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Estonsko
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/leagues?country=Estonia" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" \
+            | jq -r '.response[] as $item | ($item.seasons[] | select(.current==true)) as $cur | "\($item.league.id)\t\($item.league.name)\tplayers_coverage=\($cur.coverage.players)"'
+
+      - name: Lotyssko
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/leagues?country=Latvia" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" \
+            | jq -r '.response[] as $item | ($item.seasons[] | select(.current==true)) as $cur | "\($item.league.id)\t\($item.league.name)\tplayers_coverage=\($cur.coverage.players)"'
+
+      - name: Slovinsko
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/leagues?country=Slovenia" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" \
+            | jq -r '.response[] as $item | ($item.seasons[] | select(.current==true)) as $cur | "\($item.league.id)\t\($item.league.name)\tplayers_coverage=\($cur.coverage.players)"'
+
+      - name: Bosna a Hercegovina
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/leagues?country=Bosnia" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" \
+            | jq -r '.response[] as $item | ($item.seasons[] | select(.current==true)) as $cur | "\($item.league.id)\t\($item.league.name)\tplayers_coverage=\($cur.coverage.players)"'
