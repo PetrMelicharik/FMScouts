@@ -166,6 +166,7 @@ def fetch_players_for_season(league, season):
                     "firstname":      p.get("firstname", ""),
                     "lastname":       p.get("lastname", ""),
                     "age":            p.get("age"),
+                    "birthDate":      p.get("birth", {}).get("date"),
                     "nationality":    p.get("nationality", ""),
                     "height":         p.get("height", ""),
                     "weight":         p.get("weight", ""),
