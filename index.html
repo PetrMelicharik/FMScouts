@@ -794,6 +794,17 @@ function flag(nat){var c=FL[nat];return c?'<img src="https://flagcdn.com/16x12/'
 function ll(p){var n=LN[p.leagueId]||p.leagueName||'';var c=CN[p.country]||'';return c?n+' ('+c+')':n;}
 function rc(r){r=parseFloat(r);if(!r)return'var(--text)';return r>=7.5?'#16a34a':r>=6.5?'#2563eb':r>=5.5?'#d97706':'#dc2626';}
 
+function makeInlineStar(pid,tid,size){
+  var btn=document.createElement('button');
+  btn.className='star-btn'+(isInShortlist(pid)?' active':'');
+  btn.dataset.pid=pid;
+  btn.title=isInShortlist(pid)?'Odebrat ze shortlistu':'Přidat do shortlistu';
+  btn.textContent='★';
+  btn.style.cssText='position:static;font-size:'+(size||18)+'px;flex-shrink:0';
+  (function(p,t){btn.onclick=function(e){e.stopPropagation();toggleShortlist(p,t);};})(pid,tid);
+  return btn;
+}
+
 function makeAv(url,col,name,size){
   var el=document.createElement('div');
   el.className='av';
@@ -1309,6 +1320,7 @@ function renderTow(){
     var rankClass=i===0?'g':i===1?'s':i===2?'b':'';
     row.innerHTML='<div class="tow-rank '+rankClass+'">'+(i+1)+'</div>';
     row.appendChild(makeAv(p.photo,col,p.name,36));
+    row.appendChild(makeInlineStar(p.id,p.teamId,18));
     var info=document.createElement('div');
     info.style.cssText='flex:1;min-width:0';
     info.innerHTML='<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
@@ -1597,6 +1609,7 @@ function renderWeekend(){
       row.onclick=function(){openPlayer(p.id,p.teamId);};
       row.innerHTML='<div class="tow-rank '+rankClass+'">'+(i+1)+'</div>';
       row.appendChild(makeAv(p.photo,col,p.name,36));
+      row.appendChild(makeInlineStar(p.id,p.teamId,18));
 
       var info=document.createElement('div');
       info.style.cssText='flex:1;min-width:0';
@@ -1807,10 +1820,11 @@ function renderTotw(){
         var av=document.createElement('div');
         av.appendChild(makeAv(pl.photo,PC[pl.position]||'#3ab54a',pl.name,32));
         row.appendChild(av);
+        row.appendChild(makeInlineStar(pl.id,pl.teamId,18));
         var info=document.createElement('div');
         info.style.cssText='flex:1;min-width:0';
         info.innerHTML='<div style="font-size:13px;font-weight:700">'+pl.name+'</div>'
-          +'<div style="font-size:11px;color:var(--muted)">'+pl.teamName+' · '+ll(pl)+'</div>';
+          +'<div style="font-size:11px;color:var(--muted);margin-top:1px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+teamLogo(pl,14)+'<span>'+pl.teamName+'</span><span>·</span>'+leagueLogo(pl,12)+'<span>'+ll(pl)+'</span></div>';
         row.appendChild(info);
         var rEl=document.createElement('div');
         rEl.innerHTML='<div style="font-size:16px;font-weight:800;color:'+rc(rating)+'">'+rating.toFixed(2)+'</div>'
