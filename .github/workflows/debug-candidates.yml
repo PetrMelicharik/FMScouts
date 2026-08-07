@@ -1,0 +1,72 @@
+name: Debug Candidate Leagues
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Estonsko
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/leagues?country=Estonia" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" \
+            | python3 -c "
+import json,sys
+d = json.load(sys.stdin)
+for item in d['response']:
+    l = item['league']
+    cur = [s for s in item['seasons'] if s.get('current')]
+    cov = cur[0]['coverage']['players'] if cur else None
+    print(f\"{l['id']:>6}  {l['name']:<35} players_coverage={cov}\")
+"
+
+      - name: Lotyšsko
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/leagues?country=Latvia" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" \
+            | python3 -c "
+import json,sys
+d = json.load(sys.stdin)
+for item in d['response']:
+    l = item['league']
+    cur = [s for s in item['seasons'] if s.get('current')]
+    cov = cur[0]['coverage']['players'] if cur else None
+    print(f\"{l['id']:>6}  {l['name']:<35} players_coverage={cov}\")
+"
+
+      - name: Slovinsko
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/leagues?country=Slovenia" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" \
+            | python3 -c "
+import json,sys
+d = json.load(sys.stdin)
+for item in d['response']:
+    l = item['league']
+    cur = [s for s in item['seasons'] if s.get('current')]
+    cov = cur[0]['coverage']['players'] if cur else None
+    print(f\"{l['id']:>6}  {l['name']:<35} players_coverage={cov}\")
+"
+
+      - name: Bosna a Hercegovina
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/leagues?country=Bosnia" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" \
+            | python3 -c "
+import json,sys
+d = json.load(sys.stdin)
+for item in d['response']:
+    l = item['league']
+    cur = [s for s in item['seasons'] if s.get('current')]
+    cov = cur[0]['coverage']['players'] if cur else None
+    print(f\"{l['id']:>6}  {l['name']:<35} players_coverage={cov}\")
+"
