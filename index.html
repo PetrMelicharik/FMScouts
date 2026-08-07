@@ -1571,6 +1571,13 @@ function renderWeekend(){
     +'&order=rating.desc'
     +'&limit=200';
 
+  if(leagueFilter){
+    var lpForId=players.find(function(p){return p.leagueName===leagueFilter;});
+    if(lpForId&&lpForId.leagueId){
+      url += '&league_id=eq.'+lpForId.leagueId;
+    }
+  }
+
   fetch(url, {headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})
     .then(function(r){return r.json();}).then(function(data){
     if(!data||!data.length){
@@ -1653,11 +1660,18 @@ function renderTotw(){
 
   var since=new Date(Date.now()-7*24*60*60*1000).toISOString();
   var url=SUPABASE_URL+'/rest/v1/player_match_stats'
-    +'?select=player_id,rating,goals,assists,minutes,matches!inner(match_date,home_team,away_team)'
+    +'?select=player_id,rating,goals,assists,minutes,league_id,matches!inner(match_date,home_team,away_team)'
     +'&rating=not.is.null'
     +'&matches.match_date=gte.'+encodeURIComponent(since)
     +'&order=rating.desc'
     +'&limit=500';
+
+  if(leagueFilter){
+    var lpForId=players.find(function(p){return p.leagueName===leagueFilter;});
+    if(lpForId&&lpForId.leagueId){
+      url += '&league_id=eq.'+lpForId.leagueId;
+    }
+  }
 
   fetch(url,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})
     .then(function(r){return r.json();})
