@@ -1,0 +1,22 @@
+name: Debug API Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fixtures sezona 2026
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/fixtures?league=332&season=2026&status=FT" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" | python3 -m json.tool | head -80
+
+      - name: Coverage ligy 332
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: |
+          curl -s "https://v3.football.api-sports.io/leagues?id=332" \
+            -H "x-apisports-key: $APIFOOTBALL_KEY" | python3 -m json.tool
