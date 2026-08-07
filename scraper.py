@@ -1,8 +1,17 @@
 """
 FMScouts Scraper — API-Football
 Stahuje hráče a statistiky ze všech lig.
-Aktuální sezóna se zjišťuje přímo z API-Football (spolehlivější než odhad podle data),
-s fallbackem na starý odhad podle měsíce, pokud by API selhalo.
+Každá liga má správně nastavenou aktuální sezónu.
+
+Změny oproti předchozí verzi:
+- před stahováním hráčů se ověří API-Football coverage.players pro danou
+  ligu/sezónu (endpoint /leagues?id=X) — pokud je false, rovnou se jde na
+  předchozí sezónu, ať se zbytečně netahají prázdné odpovědi
+- log hlášky přesně říkají PROČ se použila jiná sezóna (coverage vypnuté /
+  žádné týmy / 0 hráčů se statistikami) místo dohadu "asi ještě nezačala"
+- do players.json meta se u každé ligy ukládá seasonUsed, seasonRequested,
+  playerStatsUnavailable a fallbackReason, takže je to vidět i mimo log
+- jedna liga, která spadne s chybou, už nezastaví zbytek běhu (try/except)
 """
 
 import requests
@@ -26,7 +35,6 @@ LEAGUES = [
     # Dánsko — podzim-jaro (od 2024/25)
     {"id": 119, "name": "Dánsko (1. liga)",       "country": "Denmark",     "tier": 1, "season_type": "fall_spring"},
     {"id": 120, "name": "Dánsko (2. liga)",       "country": "Denmark",     "tier": 2, "season_type": "fall_spring"},
-    # Estonsko — jaro-podzim
     # Finsko — jaro-podzim
     {"id": 244, "name": "Finsko (1. liga)",       "country": "Finland",     "tier": 1, "season_type": "spring_fall"},
     # Chorvatsko
@@ -43,7 +51,6 @@ LEAGUES = [
     {"id": 283, "name": "Rumunsko (1. liga)",     "country": "Romania",     "tier": 1, "season_type": "fall_spring"},
     # Slovensko
     {"id": 332, "name": "Slovensko (1. liga)",    "country": "Slovakia",    "tier": 1, "season_type": "fall_spring"},
-    # Slovinsko
     # Srbsko
     {"id": 286, "name": "Srbsko (1. liga)",       "country": "Serbia",      "tier": 1, "season_type": "fall_spring"},
     # Švédsko — jaro-podzim
@@ -55,17 +62,22 @@ LEAGUES = [
     {"id": 333, "name": "Ukrajina (1. liga)",     "country": "Ukraine",     "tier": 1, "season_type": "fall_spring"},
 ]
 
-def estimate_season_by_date(season_type):
-    """Starý odhad podle měsíce — používá se jen jako fallback, pokud selže dotaz na API."""
+
+def current_season(season_type):
+    """Vrátí aktuální sezónu podle typu ligy."""
     now = datetime.utcnow()
     year = now.year
     if season_type == "spring_fall":
+        # Jaro-podzim: sezóna = aktuální rok (2026)
         return year
     else:
+        # Podzim-jaro: sezóna začala loni (2025/26 → season = 2025)
+        # Pokud jsme po červenci, sezóna začala letos, jinak loni
         if now.month >= 7:
             return year
         else:
             return year - 1
+
 
 def get(endpoint, params={}):
     headers = {"x-apisports-key": API_KEY}
@@ -82,32 +94,39 @@ def get(endpoint, params={}):
     r.raise_for_status()
     return r.json().get("response", [])
 
-def get_current_season(league_id, season_type):
+
+def get_player_coverage(league_id, season):
     """
-    Zjistí aktuální sezónu přímo z API-Football (endpoint /leagues vrací u každé
-    sezóny příznak "current": true) — spolehlivější než odhad podle data, který
-    selhává na přelomu sezón (nová sezóna existuje jako záznam, ale ještě nemá
-    žádné odehrané zápasy/statistiky).
-    Pokud dotaz selže nebo API neoznačí žádnou sezónu jako aktuální, spadne
-    zpět na starý odhad podle měsíce.
+    Zjistí u API-Football, jestli má daná liga+sezóna zapnuté coverage.players
+    (endpoint /leagues?id=X vrací seznam sezón s coverage flagy).
+    Vrací True / False / None (nepodařilo se zjistit — sezóna nenalezena
+    v seznamu, nebo dotaz selhal).
     """
     try:
         resp = get("leagues", {"id": league_id})
-        if resp:
-            seasons = resp[0].get("seasons", [])
-            for s in seasons:
-                if s.get("current"):
-                    return s.get("year")
     except Exception as e:
-        print(f"  ⚠ Nepodařilo se zjistit aktuální sezónu z API ({e}), používám odhad podle data.")
-    return estimate_season_by_date(season_type)
+        print(f"    ⚠ Nepodařilo se ověřit coverage: {e}")
+        return None
+    if not resp:
+        return None
+    for s in resp[0].get("seasons", []):
+        if s.get("year") == season:
+            return s.get("coverage", {}).get("players")
+    return None
 
-def scrape_teams_players(lid, season, league):
-    """Stáhne týmy a hráče pro danou ligu a konkrétní sezónu.
-    Vrátí None, pokud liga v dané sezóně vůbec nemá žádné týmy."""
+
+def fetch_players_for_season(league, season):
+    """
+    Stáhne hráče pro všechny týmy dané ligy a sezóny.
+    Vrací (players, teams_count):
+      - players je None, pokud pro danou sezónu nejsou vůbec žádné týmy
+      - players je [] (prázdný seznam), pokud týmy jsou, ale žádný hráč
+        nemá k dispozici statistiky
+    """
+    lid = league["id"]
     teams = get("teams", {"league": lid, "season": season})
     if not teams:
-        return None
+        return None, 0
 
     print(f"  Týmy: {len(teams)}, Sezóna: {season}")
     all_players = []
@@ -147,12 +166,10 @@ def scrape_teams_players(lid, season, league):
                     "firstname":      p.get("firstname", ""),
                     "lastname":       p.get("lastname", ""),
                     "age":            p.get("age"),
-                    "birthDate":      p.get("birth", {}).get("date", ""),
                     "nationality":    p.get("nationality", ""),
                     "height":         p.get("height", ""),
                     "weight":         p.get("weight", ""),
                     "photo":          p.get("photo", ""),
-                    "injured":        p.get("injured", False),
                     "leagueId":       lid,
                     "leagueName":     league["name"],
                     "leagueTier":     league["tier"],
@@ -161,16 +178,12 @@ def scrape_teams_players(lid, season, league):
                     "teamName":       team_name,
                     "season":         season,
                     "position":       games.get("position", ""),
-                    "shirtNumber":    games.get("number"),
-                    "captain":        games.get("captain", False),
                     "appearances":    games.get("appearences"),
                     "lineups":        games.get("lineups"),
                     "minutesPlayed":  games.get("minutes"),
                     "rating":         games.get("rating"),
                     "goals":          goals.get("total"),
                     "assists":        goals.get("assists"),
-                    "goalsConceded":  goals.get("conceded"),
-                    "saves":          goals.get("saves"),
                     "shots":          shots.get("total"),
                     "shotsOnTarget":  shots.get("on"),
                     "passes":         passes.get("total"),
@@ -189,7 +202,6 @@ def scrape_teams_players(lid, season, league):
                     "foulsSuffered":  fouls.get("drawn"),
                     "penaltyScored":  penalty.get("scored"),
                     "penaltyMissed":  penalty.get("missed"),
-                    "penaltySaved":   penalty.get("saved"),
                     "lastUpdated":    datetime.utcnow().isoformat(),
                 })
             if len(players) < 20:
@@ -199,38 +211,79 @@ def scrape_teams_players(lid, season, league):
         print(f"✓ {len(team_players)} hráčů")
         all_players.extend(team_players)
 
-    return all_players
+    return all_players, len(teams)
+
 
 def scrape_league(league):
-    lid = league["id"]
-    season = get_current_season(lid, league["season_type"])
+    """
+    Stáhne hráče pro jednu ligu. Vrací (players, meta), kde meta obsahuje:
+      seasonRequested        - sezóna, která by měla logicky platit teď
+      seasonUsed              - sezóna, ze které reálně pocházejí data (None při úplném selhání)
+      playerStatsUnavailable  - True, pokud API-Football nemá pro seasonRequested statistiky hráčů
+      fallbackReason           - lidsky čitelný důvod přepnutí sezóny (nebo None)
+    """
+    lid             = league["id"]
+    intended_season = current_season(league["season_type"])
+    lname           = league["name"]
     print(f"\n{'='*50}")
-    print(f"  {league['name']} (ID:{lid} Sezóna:{season})")
+    print(f"  {lname} (ID:{lid} Sezóna:{intended_season})")
     print(f"{'='*50}")
 
-    all_players = scrape_teams_players(lid, season, league)
+    meta = {
+        "seasonRequested":       intended_season,
+        "seasonUsed":            intended_season,
+        "playerStatsUnavailable": False,
+        "fallbackReason":        None,
+    }
 
-    if all_players is None:
-        # Žádné týmy vůbec pro tuto sezónu — zkus předchozí
-        fallback = season - 1
-        print(f"  ↺ Žádné týmy pro {season}, zkouším {fallback}...")
-        all_players = scrape_teams_players(lid, fallback, league)
-        if all_players is None:
-            print(f"  ✗ Žádné týmy nenalezeny")
-            return []
-        season = fallback
+    season = intended_season
 
-    elif len(all_players) == 0:
-        # Týmy existují, ale bez jediné statistiky — nová sezóna typicky ještě nezačala
-        fallback = season - 1
-        print(f"  ↺ 0 hráčů se statistikami pro sezónu {season} (pravděpodobně ještě nezačala), zkouším {fallback}...")
-        fallback_players = scrape_teams_players(lid, fallback, league)
-        if fallback_players:
-            all_players = fallback_players
-            season = fallback
+    # 1) Ověř předem, jestli API-Football vůbec má statistiky hráčů pro tuhle sezónu.
+    coverage = get_player_coverage(lid, season)
+    if coverage is False:
+        print(f"  ⚠ API-Football: coverage.players=false pro sezónu {season} "
+              f"(liga se může už hrát, ale poskytovatel zatím nezveřejňuje statistiky hráčů).")
+        meta["playerStatsUnavailable"] = True
+        meta["fallbackReason"] = f"coverage.players=false pro sezónu {intended_season}"
+        season = season - 1
+        print(f"  ↺ Zkouším rovnou sezónu {season} místo {intended_season}.")
+    elif coverage is None:
+        print(f"  ℹ Coverage se nepodařilo ověřit, zkouším sezónu {season} přímo.")
 
-    print(f"\n  Liga hotova: {len(all_players)} hráčů (sezóna {season})")
-    return all_players
+    # 2) Stáhni hráče pro (případně už přepnutou) sezónu.
+    players, teams_count = fetch_players_for_season(league, season)
+
+    # 3a) Vůbec žádné týmy pro tuhle sezónu.
+    if players is None:
+        fallback_season = intended_season - 1
+        if fallback_season != season:
+            print(f"  ↺ Žádné týmy pro sezónu {season}, zkouším {fallback_season}...")
+            players, teams_count = fetch_players_for_season(league, fallback_season)
+            season = fallback_season
+            meta["fallbackReason"] = meta["fallbackReason"] or f"žádné týmy nenalezeny pro sezónu {intended_season}"
+        if players is None:
+            print(f"  ✗ Žádné týmy nenalezeny ani pro sezónu {season}")
+            meta["seasonUsed"] = None
+            return [], meta
+
+    # 3b) Týmy jsou, ale nikdo nemá statistiky (0 hráčů) — a ještě jsme nepřešli na fallback.
+    elif len(players) == 0 and teams_count > 0 and season == intended_season:
+        fallback_season = intended_season - 1
+        print(f"  ↺ 0 hráčů se statistikami pro sezónu {season} "
+              f"(API-Football zatím nemá player-data pro tuto sezónu), zkouším {fallback_season}...")
+        fb_players, fb_teams_count = fetch_players_for_season(league, fallback_season)
+        if fb_players:
+            players = fb_players
+            season = fallback_season
+            meta["playerStatsUnavailable"] = True
+            meta["fallbackReason"] = f"0 hráčů se statistikami vráceno pro sezónu {intended_season}"
+        else:
+            print(f"  ✗ Ani sezóna {fallback_season} nemá hráče se statistikami")
+
+    meta["seasonUsed"] = season
+    print(f"\n  Liga hotova: {len(players)} hráčů (sezóna {season})")
+    return players, meta
+
 
 def save(players, leagues_done):
     Path(OUTPUT).parent.mkdir(parents=True, exist_ok=True)
@@ -244,12 +297,15 @@ def save(players, leagues_done):
             }
         }, f, ensure_ascii=False, indent=2)
 
+
 def main():
     now = datetime.utcnow()
     print(f"\n{'#'*50}")
     print(f"  FMScouts Scraper — {now.strftime('%Y-%m-%d %H:%M UTC')}")
     print(f"  Lig: {len(LEAGUES)}")
-    print(f"  Sezóna se zjišťuje přímo z API-Football (s fallbackem na odhad podle data)")
+    print(f"  Aktuální sezóny:")
+    print(f"    Jaro-podzim (NO, SE, FI, DK...): {current_season('spring_fall')}")
+    print(f"    Podzim-jaro (CZ, SK, PL...):     {current_season('fall_spring')}")
     print(f"{'#'*50}\n")
 
     if not API_KEY:
@@ -260,22 +316,43 @@ def main():
     leagues_done = []
 
     for league in LEAGUES:
-        players = scrape_league(league)
-        used_season = players[0]["season"] if players else get_current_season(league["id"], league["season_type"])
+        try:
+            players, meta = scrape_league(league)
+        except Exception as e:
+            print(f"  ✗ Chyba při scrapování ligy {league['name']}: {e}")
+            leagues_done.append({
+                "id":                     league["id"],
+                "name":                   league["name"],
+                "country":                league["country"],
+                "tier":                   league["tier"],
+                "season":                 None,
+                "seasonRequested":        current_season(league["season_type"]),
+                "players":                0,
+                "playerStatsUnavailable": None,
+                "fallbackReason":         None,
+                "error":                  str(e),
+            })
+            save(all_players, leagues_done)
+            continue
+
         all_players.extend(players)
         leagues_done.append({
-            "id":      league["id"],
-            "name":    league["name"],
-            "country": league["country"],
-            "tier":    league["tier"],
-            "season":  used_season,
-            "players": len(players),
+            "id":                     league["id"],
+            "name":                   league["name"],
+            "country":                league["country"],
+            "tier":                   league["tier"],
+            "season":                 meta["seasonUsed"],
+            "seasonRequested":        meta["seasonRequested"],
+            "players":                len(players),
+            "playerStatsUnavailable": meta["playerStatsUnavailable"],
+            "fallbackReason":         meta["fallbackReason"],
         })
         save(all_players, leagues_done)
 
     print(f"\n{'#'*50}")
     print(f"✅ HOTOVO! {len(all_players)} hráčů z {len(LEAGUES)} lig")
     print(f"{'#'*50}")
+
 
 if __name__ == "__main__":
     main()
