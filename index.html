@@ -274,6 +274,28 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="view" id="view-shortlist">
     <div class="page-title">Shortlist</div>
     <div class="page-sub" id="shortlist-sub"></div>
+    <div class="controls">
+      <input class="inp" style="flex:1;min-width:180px" type="text" id="sl-search" placeholder="🔍  Hledat jméno, klub nebo národnost..." oninput="renderShortlist()">
+      <select class="inp" id="sl-fpos" onchange="renderShortlist()">
+        <option value="">Všechny pozice</option>
+        <option value="Goalkeeper">Brankáři</option>
+        <option value="Defender">Obránci</option>
+        <option value="Midfielder">Záložníci</option>
+        <option value="Attacker">Útočníci</option>
+      </select>
+      <select class="inp" id="sl-fleague" onchange="renderShortlist()">
+        <option value="">Všechny ligy</option>
+      </select>
+      <select class="inp" id="sl-fsort" onchange="renderShortlist()">
+        <option value="rating">Rating ↓</option>
+        <option value="goals">Góly ↓</option>
+        <option value="name">Jméno A–Z</option>
+        <option value="age_asc">Věk ↑</option>
+        <option value="age_desc">Věk ↓</option>
+      </select>
+      <input class="inp" type="number" id="sl-fage_min" placeholder="Věk od" min="15" max="45" style="width:90px" oninput="renderShortlist()">
+      <input class="inp" type="number" id="sl-fage_max" placeholder="Věk do" min="15" max="45" style="width:90px" oninput="renderShortlist()">
+    </div>
     <div id="shortlist-grid" class="grid"></div>
   </div>
 
@@ -348,16 +370,52 @@ function toggleShortlist(id,teamId){
   if(document.getElementById('view-shortlist').style.display!=='none') renderShortlist();
 }
 
+function buildShortlistFilter(){
+  var sel=document.getElementById('sl-fleague');
+  if(sel && sel.options.length<=1){
+    var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
+    leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;sel.appendChild(o);});
+  }
+}
+
 function renderShortlist(){
   loadShortlist();
+  buildShortlistFilter();
   var sub=document.getElementById('shortlist-sub');
   var grid=document.getElementById('shortlist-grid');
   if(!sub||!grid)return;
-  var list=shortlist.map(function(s){return players.find(function(p){return p.id==s.id&&p.teamId==s.teamId;});}).filter(Boolean);
-  sub.textContent=list.length+' hráčů';
+  var base=shortlist.map(function(s){return players.find(function(p){return p.id==s.id&&p.teamId==s.teamId;});}).filter(Boolean);
+
+  var q=(document.getElementById('sl-search').value||'').toLowerCase();
+  var pos=document.getElementById('sl-fpos').value;
+  var league=document.getElementById('sl-fleague').value;
+  var sort=document.getElementById('sl-fsort').value;
+  var ageMin=parseInt(document.getElementById('sl-fage_min').value)||0;
+  var ageMax=parseInt(document.getElementById('sl-fage_max').value)||99;
+
+  var list=base.filter(function(p){
+    if(q){var s=(p.name+' '+(p.teamName||'')+' '+(p.nationality||'')).toLowerCase();if(s.indexOf(q)<0)return false;}
+    if(pos&&playerCat(p)!==pos)return false;
+    if(league&&p.leagueName!==league)return false;
+    if(ageMin>0&&(p.age||0)<ageMin)return false;
+    if(ageMax<99&&(p.age||99)>ageMax)return false;
+    return true;
+  });
+
+  if(sort==='rating')list.sort(function(a,b){return(parseFloat(b.rating)||0)-(parseFloat(a.rating)||0);});
+  else if(sort==='goals')list.sort(function(a,b){return(b.goals||0)-(a.goals||0);});
+  else if(sort==='age_asc')list.sort(function(a,b){return(a.age||99)-(b.age||99);});
+  else if(sort==='age_desc')list.sort(function(a,b){return(b.age||0)-(a.age||0);});
+  else list.sort(function(a,b){return(a.name||'').localeCompare(b.name||'');});
+
+  sub.textContent=base.length?(list.length+' z '+base.length+' hráčů'):'0 hráčů';
   grid.innerHTML='';
-  if(!list.length){
+  if(!base.length){
     grid.innerHTML='<div class="empty" style="grid-column:1/-1"><h3>Shortlist je prázdný</h3><p>Klikni na hvězdičku u hráče pro přidání.</p></div>';
+    return;
+  }
+  if(!list.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><h3>Žádní hráči</h3><p>Zkus jiný filtr.</p></div>';
     return;
   }
   list.forEach(function(p){
