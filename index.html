@@ -1953,6 +1953,11 @@ function renderTotw(){
           +'</div>';
       });
 
+      pitch+='<div style="position:absolute;bottom:10px;right:10px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.5);padding:5px 10px 5px 5px;border-radius:20px">'
+        +'<img src="logo.jpg" style="width:20px;height:20px;border-radius:6px;object-fit:cover;display:block" onerror="this.style.display=\'none\'">'
+        +'<span style="color:white;font-size:11px;font-weight:800;letter-spacing:.3px;white-space:nowrap">FM<span style="color:#3ab54a">Scouts</span></span>'
+        +'</div>';
+
       pitch+='</div></div>';
       el.innerHTML=pitch;
 
