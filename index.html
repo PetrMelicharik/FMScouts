@@ -257,6 +257,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <select class="inp" id="weekend-league" onchange="renderWeekend()">
         <option value="">Všechny ligy</option>
+        <option value="__shortlist__">⭐ Shortlist</option>
       </select>
       <select class="inp" id="weekend-pos" onchange="renderWeekend()">
         <option value="">Všechny pozice</option>
@@ -1561,10 +1562,12 @@ function renderWeekend(){
   if(!el) return;
   el.innerHTML = '<div class="empty"><h3>Načítám data...</h3></div>';
 
-  if(leagueEl && leagueEl.options.length<=1){
+  if(leagueEl && leagueEl.options.length<=2){
     var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
     leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;leagueEl.appendChild(o);});
   }
+
+  var isShortlistMode = leagueFilter==='__shortlist__';
 
   var since = new Date(Date.now() - 7*24*60*60*1000).toISOString();
 
@@ -1573,13 +1576,23 @@ function renderWeekend(){
     +'?select=player_id,rating,goals,assists,minutes,team_name,league_id,matches!inner(match_date,home_team,away_team)'
     +'&rating=not.is.null'
     +'&matches.match_date=gte.'+encodeURIComponent(since)
-    +'&order=rating.desc'
-    +'&limit=200';
+    +'&order=rating.desc';
 
-  if(leagueFilter){
-    var lpForId=players.find(function(p){return p.leagueName===leagueFilter;});
-    if(lpForId&&lpForId.leagueId){
-      url += '&league_id=eq.'+lpForId.leagueId;
+  if(isShortlistMode){
+    loadShortlist();
+    var shortlistIds=shortlist.map(function(s){return s.id;});
+    if(!shortlistIds.length){
+      el.innerHTML='<div class="empty"><h3>Shortlist je prázdný</h3><p>Přidej hráče přes hvězdičku u profilu.</p></div>';
+      return;
+    }
+    url += '&player_id=in.('+shortlistIds.join(',')+')&limit=100';
+  } else {
+    url += '&limit=200';
+    if(leagueFilter){
+      var lpForId=players.find(function(p){return p.leagueName===leagueFilter;});
+      if(lpForId&&lpForId.leagueId){
+        url += '&league_id=eq.'+lpForId.leagueId;
+      }
     }
   }
 
@@ -1596,7 +1609,7 @@ function renderWeekend(){
       return{d:d, pl:pl};
     }).filter(function(r){
       if(!r.pl) return false;
-      if(leagueFilter && r.pl.leagueName !== leagueFilter) return false;
+      if(!isShortlistMode && leagueFilter && r.pl.leagueName !== leagueFilter) return false;
       if(posFilter && playerCat(r.pl) !== posFilter) return false;
       return true;
     }).slice(0,20);
