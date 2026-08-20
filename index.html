@@ -1916,16 +1916,17 @@ function renderTotw(){
         var entry=slots[pos.slot];
         var xPct=pos.x, yPct=pos.y;
         var rating=entry?parseFloat(entry.d.rating):null;
-        var rCol=rating?rc(rating):'#9ca3af';
+        var ringCol='#ffffff';
+        var badgeCol='#3ab54a';
 
         var photoHtml='';
-        var sz=54;
+        var sz=62;
         if(entry&&entry.pl.photo){
-          photoHtml='<div style="width:'+(sz+8)+'px;height:'+(sz+8)+'px;border-radius:50%;background:'+rCol+';display:flex;align-items:center;justify-content:center;padding:3px;box-shadow:0 4px 12px rgba(0,0,0,0.45),0 0 16px '+rCol+'80">'
+          photoHtml='<div style="width:'+(sz+8)+'px;height:'+(sz+8)+'px;border-radius:50%;background:'+ringCol+';display:flex;align-items:center;justify-content:center;padding:3px;box-shadow:0 4px 12px rgba(0,0,0,0.45)">'
             +'<img src="'+entry.pl.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid white;display:block">'
             +'</div>';
         } else {
-          var ph=entry?rCol:'rgba(255,255,255,0.25)';
+          var ph=entry?ringCol:'rgba(255,255,255,0.25)';
           photoHtml='<div style="width:'+(sz+8)+'px;height:'+(sz+8)+'px;border-radius:50%;background:'+ph+';display:flex;align-items:center;justify-content:center;padding:3px;box-shadow:0 4px 12px rgba(0,0,0,0.4)">'
             +'<div style="width:100%;height:100%;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:20px;color:rgba(255,255,255,0.7)">?</div>'
             +'</div>';
@@ -1934,11 +1935,11 @@ function renderTotw(){
         // Team logo badge
         var teamLogoHtml='';
         if(entry&&entry.pl.teamId){
-          teamLogoHtml='<img src="https://media.api-sports.io/football/teams/'+entry.pl.teamId+'.png" style="width:20px;height:20px;object-fit:contain;position:absolute;bottom:-2px;right:2px;background:white;border-radius:50%;padding:2px;box-shadow:0 2px 5px rgba(0,0,0,0.4);border:1.5px solid white">';
+          teamLogoHtml='<img src="https://media.api-sports.io/football/teams/'+entry.pl.teamId+'.png" style="width:26px;height:26px;object-fit:contain;position:absolute;bottom:-3px;right:0px;background:white;border-radius:50%;padding:2px;box-shadow:0 2px 5px rgba(0,0,0,0.4);border:1.5px solid white">';
         }
 
         var nameHtml=entry?entry.pl.name.split(' ').pop():'—';
-        var ratingHtml=rating?'<div style="font-size:12px;font-weight:800;color:white;background:'+rCol+';border-radius:20px;padding:2px 10px;margin-top:5px;display:inline-block;box-shadow:0 2px 6px rgba(0,0,0,0.35);letter-spacing:.3px">'+rating.toFixed(1)+'</div>':'';
+        var ratingHtml=rating?'<div style="font-size:12px;font-weight:800;color:white;background:'+badgeCol+';border-radius:20px;padding:2px 10px;margin-top:5px;display:inline-block;box-shadow:0 2px 6px rgba(0,0,0,0.35);letter-spacing:.3px">'+rating.toFixed(1)+'</div>':'';
 
         var clickFn=entry?'openPlayer('+entry.pl.id+','+entry.pl.teamId+')':'';
 
