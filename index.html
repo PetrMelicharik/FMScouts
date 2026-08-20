@@ -302,11 +302,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="view" id="view-totw">
     <div class="page-title">Tým týdne</div>
     <div class="page-sub">Nejlepší hráči dle ratingu za posledních 7 dní</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
       <select class="inp" id="totw-league" onchange="renderTotw()">
         <option value="">Všechny ligy</option>
         <option value="__shortlist__">⭐ Shortlist</option>
       </select>
+      <button class="btn" id="totw-download-btn" onclick="downloadTotwImage()" style="width:auto;padding:9px 16px;white-space:nowrap">⬇ Stáhnout obrázek</button>
     </div>
     <div id="totw-content"><div class="empty"><h3>Načítám...</h3></div></div>
   </div>
@@ -337,6 +338,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 var players=[], cmpList=[], current=null, tmData={};
 var shortlist=[];
@@ -1726,6 +1728,37 @@ function renderWeekend(){
   });
 }
 
+function downloadTotwImage(){
+  var target=document.getElementById('totw-pitch');
+  if(!target){
+    alert('Tým týdne ještě není načtený, zkus to za chvíli.');
+    return;
+  }
+  if(typeof html2canvas==='undefined'){
+    alert('Nástroj pro export obrázku se nenačetl. Zkus obnovit stránku.');
+    return;
+  }
+  var btn=document.getElementById('totw-download-btn');
+  var origText=btn?btn.textContent:'';
+  if(btn){btn.textContent='⏳ Připravuji...';btn.disabled=true;}
+
+  html2canvas(target,{backgroundColor:'#2d7a3a',scale:2,useCORS:true}).then(function(canvas){
+    var leagueVal=document.getElementById('totw-league').value;
+    var namePart='vsechny_ligy';
+    if(leagueVal==='__shortlist__') namePart='shortlist';
+    else if(leagueVal) namePart=leagueVal.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+    var link=document.createElement('a');
+    link.download='tym_tydne_'+namePart+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  }).catch(function(e){
+    console.error(e);
+    alert('Export obrázku se nepovedl. Zkus to znovu.');
+  }).finally(function(){
+    if(btn){btn.textContent=origText;btn.disabled=false;}
+  });
+}
+
 function renderTotw(){
   var leagueEl=document.getElementById('totw-league');
   var leagueFilter=leagueEl?leagueEl.value:'';
@@ -1845,7 +1878,7 @@ function renderTotw(){
 
       // Hřiště SVG
       var W=440,H=620;
-      var pitch='<div style="position:relative;max-width:'+W+'px;margin:0 auto">'
+      var pitch='<div id="totw-pitch" style="position:relative;max-width:'+W+'px;margin:0 auto;background:#2d7a3a;border-radius:12px;padding:1px">'
         +'<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;border-radius:12px">'
         // Zelené pozadí
         +'<rect width="'+W+'" height="'+H+'" fill="#2d7a3a"/>'
