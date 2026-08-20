@@ -219,6 +219,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <select class="inp" id="tow-league" onchange="renderTow()">
         <option value="">Všechny ligy</option>
+        <option value="__shortlist__">⭐ Shortlist</option>
       </select>
       <select class="inp" id="tow-pos" onchange="renderTow()">
         <option value="">Všechny pozice</option>
@@ -282,6 +283,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <select class="inp" id="totw-league" onchange="renderTotw()">
         <option value="">Všechny ligy</option>
+        <option value="__shortlist__">⭐ Shortlist</option>
       </select>
     </div>
     <div id="totw-content"><div class="empty"><h3>Načítám...</h3></div></div>
@@ -1259,7 +1261,7 @@ function setTowCat(cat){
 function buildTowFilter(){
   var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
   var sel=document.getElementById('tow-league');
-  if(sel.options.length<=1){
+  if(sel.options.length<=2){
     leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;sel.appendChild(o);});
   }
 }
@@ -1291,8 +1293,11 @@ function renderTow(){
   };
   var cat=cats[towCat]||cats.rating;
 
+  var isShortlistMode = league==='__shortlist__';
+
   var list=players.filter(function(p){
-    if(league&&p.leagueName!==league)return false;
+    if(isShortlistMode){if(!isInShortlist(p.id))return false;}
+    else if(league&&p.leagueName!==league)return false;
     if(pos&&playerCat(p)!==pos)return false;
     if(towCat==='rating')return parseFloat(p.rating)&&(p.minutesPlayed||0)>=90;
     if(towCat==='points')return ((p.goals||0)+(p.assists||0))>=cat.min;
@@ -1671,23 +1676,35 @@ function renderTotw(){
   el.innerHTML='<div class="empty"><h3>Načítám...</h3></div>';
 
   // Naplň filtr lig pokud ještě není
-  if(leagueEl&&leagueEl.options.length<=1){
+  if(leagueEl&&leagueEl.options.length<=2){
     var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
     leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;leagueEl.appendChild(o);});
   }
+
+  var isShortlistMode=leagueFilter==='__shortlist__';
 
   var since=new Date(Date.now()-7*24*60*60*1000).toISOString();
   var url=SUPABASE_URL+'/rest/v1/player_match_stats'
     +'?select=player_id,rating,goals,assists,minutes,league_id,matches!inner(match_date,home_team,away_team)'
     +'&rating=not.is.null'
     +'&matches.match_date=gte.'+encodeURIComponent(since)
-    +'&order=rating.desc'
-    +'&limit=500';
+    +'&order=rating.desc';
 
-  if(leagueFilter){
-    var lpForId=players.find(function(p){return p.leagueName===leagueFilter;});
-    if(lpForId&&lpForId.leagueId){
-      url += '&league_id=eq.'+lpForId.leagueId;
+  if(isShortlistMode){
+    loadShortlist();
+    var shortlistIds=shortlist.map(function(s){return s.id;});
+    if(!shortlistIds.length){
+      el.innerHTML='<div class="empty"><h3>Shortlist je prázdný</h3><p>Přidej hráče přes hvězdičku u profilu.</p></div>';
+      return;
+    }
+    url += '&player_id=in.('+shortlistIds.join(',')+')&limit=500';
+  } else {
+    url += '&limit=500';
+    if(leagueFilter){
+      var lpForId=players.find(function(p){return p.leagueName===leagueFilter;});
+      if(lpForId&&lpForId.leagueId){
+        url += '&league_id=eq.'+lpForId.leagueId;
+      }
     }
   }
 
@@ -1730,7 +1747,7 @@ function renderTotw(){
       records.forEach(function(d){
         var pl=players.find(function(p){return p.id==d.player_id;});
         if(!pl)return;
-        if(leagueFilter&&pl.leagueName!==leagueFilter)return;
+        if(!isShortlistMode&&leagueFilter&&pl.leagueName!==leagueFilter)return;
         if(usedPlayers[pl.id])return;
 
         var tmPos=tm(pl).position;
