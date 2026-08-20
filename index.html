@@ -1742,7 +1742,7 @@ function downloadTotwImage(){
   var origText=btn?btn.textContent:'';
   if(btn){btn.textContent='⏳ Připravuji...';btn.disabled=true;}
 
-  html2canvas(target,{backgroundColor:'#2d7a3a',scale:2,useCORS:true}).then(function(canvas){
+  html2canvas(target,{backgroundColor:'#1b5a2f',scale:3,useCORS:true}).then(function(canvas){
     var leagueVal=document.getElementById('totw-league').value;
     var namePart='vsechny_ligy';
     if(leagueVal==='__shortlist__') namePart='shortlist';
