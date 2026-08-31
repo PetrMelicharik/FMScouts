@@ -1,10 +1,7 @@
 """
 FMScouts — Scraper zápasů a per-zápasových statistik
 Ukládá data do Supabase databáze.
-Spouštět každé pondělí (po víkendu) nebo manuálně.
-
-Aktuální sezóna se zjišťuje přímo z API-Football (spolehlivější než odhad podle
-data), s fallbackem na starý odhad podle měsíce, pokud by API selhalo.
+Spouštět denně.
 """
 
 import requests
@@ -48,8 +45,7 @@ SPRING_FALL_LEAGUES = [l for l in ALL_LEAGUES if l["season_type"] == "spring_fal
 LEAGUES_MODE = os.environ.get("LEAGUES_MODE", "all")
 LEAGUES = SPRING_FALL_LEAGUES if LEAGUES_MODE == "spring_fall" else ALL_LEAGUES
 
-def estimate_season_by_date(season_type):
-    """Starý odhad podle měsíce — používá se jen jako fallback, pokud selže dotaz na API."""
+def current_season(season_type):
     now = datetime.utcnow()
     year = now.year
     if season_type == "spring_fall":
@@ -68,23 +64,6 @@ def api_get(endpoint, params={}):
         return api_get(endpoint, params)
     r.raise_for_status()
     return r.json().get("response", [])
-
-def get_current_season(league_id, season_type):
-    """
-    Zjistí aktuální sezónu přímo z API-Football (endpoint /leagues vrací u každé
-    sezóny příznak "current": true) — spolehlivější než odhad podle data, který
-    selhává na přelomu sezón. Pokud dotaz selže, spadne zpět na odhad podle měsíce.
-    """
-    try:
-        resp = api_get("leagues", {"id": league_id})
-        if resp:
-            seasons = resp[0].get("seasons", [])
-            for s in seasons:
-                if s.get("current"):
-                    return s.get("year")
-    except Exception as e:
-        print(f"  ⚠ Nepodařilo se zjistit aktuální sezónu z API ({e}), používám odhad podle data.")
-    return estimate_season_by_date(season_type)
 
 # ── Supabase ───────────────────────────────────────────────────────────────────
 
@@ -110,7 +89,7 @@ def sb_upsert(table, rows):
     return r
 
 def sb_get_match_ids():
-    """Vrátí set ID zápasů které už máme v DB."""
+    """Vrátí set ID zápasů které už máme v tabulce matches."""
     r = requests.get(
         f"{SUPABASE_URL}/rest/v1/matches?select=id&limit=10000",
         headers=sb_headers(),
@@ -119,6 +98,34 @@ def sb_get_match_ids():
     if r.status_code == 200:
         return {row["id"] for row in r.json()}
     return set()
+
+def sb_get_match_ids_with_stats():
+    """
+    Vrátí set ID zápasů, které už MAJÍ uložené statistiky hráčů.
+    Stránkuje přes player_match_stats (může jich být hodně řádků),
+    ale bere jen sloupec match_id, aby to nebylo zbytečně těžké.
+    """
+    ids = set()
+    offset = 0
+    page_size = 5000
+    while True:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/player_match_stats"
+            f"?select=match_id&limit={page_size}&offset={offset}",
+            headers=sb_headers(),
+            timeout=20
+        )
+        if r.status_code != 200:
+            break
+        rows = r.json()
+        if not rows:
+            break
+        for row in rows:
+            ids.add(row["match_id"])
+        if len(rows) < page_size:
+            break
+        offset += page_size
+    return ids
 
 # ── Stažení zápasů ─────────────────────────────────────────────────────────────
 
@@ -150,55 +157,65 @@ def fetch_fixture_players(fixture_id):
 
 # ── Zpracování ─────────────────────────────────────────────────────────────────
 
-def process_league(league, existing_ids, full_season=False):
+def process_league(league, existing_ids, stats_ids, full_season=False):
     lid    = league["id"]
-    season = get_current_season(lid, league["season_type"])
+    season = current_season(league["season_type"])
     lname  = league["name"]
     print(f"\n  {lname} (sezóna {season})")
 
     fixtures = fetch_fixtures(lid, season, full_season=full_season)
-
     if not fixtures:
-        # Sezóna zjištěná z API ještě nemá žádné odehrané zápasy (typicky těsně
-        # po přelomu sezóny) — zkus předchozí sezónu jako fallback.
-        fallback = season - 1
-        print(f"    ↺ 0 zápasů pro sezónu {season}, zkouším {fallback}...")
-        fixtures = fetch_fixtures(lid, fallback, full_season=full_season)
-        if fixtures:
-            season = fallback
-        else:
-            print(f"    Žádné nové zápasy")
-            return 0, 0
+        print(f"    Žádné nové zápasy")
+        return 0, 0
 
-    new_fixtures = [f for f in fixtures if f["fixture"]["id"] not in existing_ids]
-    print(f"    Zápasů celkem: {len(fixtures)}, nových: {len(new_fixtures)}")
+    # Zápas potřebuje zpracovat, pokud buď ještě není uložený v `matches`,
+    # NEBO je uložený, ale zatím nemá žádné statistiky hráčů (ratingy).
+    # Díky tomu se dohoní i zápasy, kde API-Football zveřejnilo ratingy
+    # se zpožděním po skončení zápasu.
+    to_process = [
+        f for f in fixtures
+        if f["fixture"]["id"] not in existing_ids
+        or f["fixture"]["id"] not in stats_ids
+    ]
+
+    new_count   = sum(1 for f in fixtures if f["fixture"]["id"] not in existing_ids)
+    retry_count = sum(
+        1 for f in fixtures
+        if f["fixture"]["id"] in existing_ids and f["fixture"]["id"] not in stats_ids
+    )
+    print(f"    Zápasů celkem: {len(fixtures)}, nových: {new_count}, dohánění ratingů: {retry_count}")
 
     matches_saved  = 0
     stats_saved    = 0
 
-    for f in new_fixtures:
+    for f in to_process:
         fix     = f["fixture"]
         fix_id  = fix["id"]
         teams   = f["teams"]
         goals   = f["goals"]
         league_info = f["league"]
 
-        # Ulož zápas
-        match_row = {
-            "id":         fix_id,
-            "league_id":  lid,
-            "season":     season,
-            "round":      league_info.get("round", ""),
-            "home_team":  teams["home"]["name"],
-            "away_team":  teams["away"]["name"],
-            "home_goals": goals.get("home"),
-            "away_goals": goals.get("away"),
-            "match_date": fix.get("date"),
-        }
-        sb_upsert("matches", [match_row])
-        matches_saved += 1
+        # Ulož zápas (idempotentní upsert — nevadí, pokud tam už je)
+        if fix_id not in existing_ids:
+            match_row = {
+                "id":         fix_id,
+                "league_id":  lid,
+                "season":     season,
+                "round":      league_info.get("round", ""),
+                "home_team":  teams["home"]["name"],
+                "away_team":  teams["away"]["name"],
+                "home_goals": goals.get("home"),
+                "away_goals": goals.get("away"),
+                "match_date": fix.get("date"),
+            }
+            sb_upsert("matches", [match_row])
+            matches_saved += 1
+            existing_ids.add(fix_id)
+            home_name, away_name = teams["home"]["name"], teams["away"]["name"]
+        else:
+            home_name, away_name = teams["home"]["name"], teams["away"]["name"]
 
-        # Stáhni statistiky hráčů
+        # Stáhni statistiky hráčů (nové i dohnané zápasy)
         player_data = fetch_fixture_players(fix_id)
         stat_rows   = []
 
@@ -234,7 +251,12 @@ def process_league(league, existing_ids, full_season=False):
         if stat_rows:
             sb_upsert("player_match_stats", stat_rows)
             stats_saved += len(stat_rows)
-            print(f"    ✓ {match_row['home_team']} vs {match_row['away_team']}: {len(stat_rows)} hráčů")
+            stats_ids.add(fix_id)
+            tag = "↺ dohnáno" if fix_id in existing_ids and retry_count else "✓"
+            print(f"    {tag} {home_name} vs {away_name}: {len(stat_rows)} hráčů")
+        else:
+            # Ratingy ještě nejsou na API-Football k dispozici — zkusíme příště znovu
+            print(f"    … {home_name} vs {away_name}: ratingy zatím nedostupné, zkusím příště")
 
     return matches_saved, stats_saved
 
@@ -255,7 +277,11 @@ def main():
 
     print("Načítám existující zápasy z DB...")
     existing_ids = sb_get_match_ids()
-    print(f"  V DB je {len(existing_ids)} zápasů\n")
+    print(f"  V DB je {len(existing_ids)} zápasů")
+
+    print("Načítám zápasy, které už mají statistiky hráčů...")
+    stats_ids = sb_get_match_ids_with_stats()
+    print(f"  {len(stats_ids)} zápasů má ratingy, {len(existing_ids) - len(stats_ids)} zápasů na ně zatím čeká\n")
 
     total_matches = 0
     total_stats   = 0
@@ -268,12 +294,12 @@ def main():
         print(f"📅 Stahuju posledních {DAYS_BACK} dní\n")
 
     for league in LEAGUES:
-        m, s = process_league(league, existing_ids, full_season=full_season)
+        m, s = process_league(league, existing_ids, stats_ids, full_season=full_season)
         total_matches += m
         total_stats   += s
 
     print(f"\n{'#'*50}")
-    print(f"✅ Hotovo! Uloženo {total_matches} zápasů, {total_stats} hráčských výkonů")
+    print(f"✅ Hotovo! Uloženo {total_matches} nových zápasů, {total_stats} hráčských výkonů")
     print(f"{'#'*50}")
 
 if __name__ == "__main__":
