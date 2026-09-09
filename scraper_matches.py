@@ -75,11 +75,14 @@ def sb_headers():
         "Prefer": "resolution=merge-duplicates"
     }
 
-def sb_upsert(table, rows):
+def sb_upsert(table, rows, on_conflict=None):
     if not rows:
         return
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    if on_conflict:
+        url += f"?on_conflict={on_conflict}"
     r = requests.post(
-        f"{SUPABASE_URL}/rest/v1/{table}",
+        url,
         headers={**sb_headers(), "Prefer": "resolution=merge-duplicates,return=minimal"},
         json=rows,
         timeout=30
@@ -249,7 +252,7 @@ def process_league(league, existing_ids, stats_ids, full_season=False):
                 })
 
         if stat_rows:
-            sb_upsert("player_match_stats", stat_rows)
+            sb_upsert("player_match_stats", stat_rows, on_conflict="player_id,match_id")
             stats_saved += len(stat_rows)
             stats_ids.add(fix_id)
             tag = "↺ dohnáno" if fix_id in existing_ids and retry_count else "✓"
