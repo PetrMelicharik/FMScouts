@@ -206,7 +206,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <option value="name">Jméno A–Z</option>
         <option value="age_asc">Věk ↑</option>
         <option value="age_desc">Věk ↓</option>
-        <option value="contract_asc">Končící smlouvy</option>
       </select>
       <input class="inp" type="number" id="fage_min" placeholder="Věk od" min="15" max="45" style="width:90px" oninput="renderPlayers()">
       <input class="inp" type="number" id="fage_max" placeholder="Věk do" min="15" max="45" style="width:90px" oninput="renderPlayers()">
@@ -220,7 +219,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <select class="inp" id="tow-league" onchange="renderTow()">
         <option value="">Všechny ligy</option>
-        <option value="__shortlist__">⭐ Shortlist</option>
       </select>
       <select class="inp" id="tow-pos" onchange="renderTow()">
         <option value="">Všechny pozice</option>
@@ -259,7 +257,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <select class="inp" id="weekend-league" onchange="renderWeekend()">
         <option value="">Všechny ligy</option>
-        <option value="__shortlist__">⭐ Shortlist</option>
       </select>
       <select class="inp" id="weekend-pos" onchange="renderWeekend()">
         <option value="">Všechny pozice</option>
@@ -275,41 +272,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="view" id="view-shortlist">
     <div class="page-title">Shortlist</div>
     <div class="page-sub" id="shortlist-sub"></div>
-    <div class="controls">
-      <input class="inp" style="flex:1;min-width:180px" type="text" id="sl-search" placeholder="🔍  Hledat jméno, klub nebo národnost..." oninput="renderShortlist()">
-      <select class="inp" id="sl-fpos" onchange="renderShortlist()">
-        <option value="">Všechny pozice</option>
-        <option value="Goalkeeper">Brankáři</option>
-        <option value="Defender">Obránci</option>
-        <option value="Midfielder">Záložníci</option>
-        <option value="Attacker">Útočníci</option>
-      </select>
-      <select class="inp" id="sl-fleague" onchange="renderShortlist()">
-        <option value="">Všechny ligy</option>
-      </select>
-      <select class="inp" id="sl-fsort" onchange="renderShortlist()">
-        <option value="rating">Rating ↓</option>
-        <option value="goals">Góly ↓</option>
-        <option value="name">Jméno A–Z</option>
-        <option value="age_asc">Věk ↑</option>
-        <option value="age_desc">Věk ↓</option>
-        <option value="contract_asc">Končící smlouvy</option>
-      </select>
-      <input class="inp" type="number" id="sl-fage_min" placeholder="Věk od" min="15" max="45" style="width:90px" oninput="renderShortlist()">
-      <input class="inp" type="number" id="sl-fage_max" placeholder="Věk do" min="15" max="45" style="width:90px" oninput="renderShortlist()">
-    </div>
     <div id="shortlist-grid" class="grid"></div>
   </div>
 
   <div class="view" id="view-totw">
     <div class="page-title">Tým týdne</div>
     <div class="page-sub">Nejlepší hráči dle ratingu za posledních 7 dní</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <select class="inp" id="totw-league" onchange="renderTotw()">
         <option value="">Všechny ligy</option>
-        <option value="__shortlist__">⭐ Shortlist</option>
       </select>
-      <button class="btn" id="totw-download-btn" onclick="downloadTotwImage()" style="width:auto;padding:9px 16px;white-space:nowrap">⬇ Stáhnout obrázek</button>
     </div>
     <div id="totw-content"><div class="empty"><h3>Načítám...</h3></div></div>
   </div>
@@ -340,7 +312,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 var players=[], cmpList=[], current=null, tmData={};
 var shortlist=[];
@@ -374,53 +345,16 @@ function toggleShortlist(id,teamId){
   if(document.getElementById('view-shortlist').style.display!=='none') renderShortlist();
 }
 
-function buildShortlistFilter(){
-  var sel=document.getElementById('sl-fleague');
-  if(sel && sel.options.length<=1){
-    var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
-    leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;sel.appendChild(o);});
-  }
-}
-
 function renderShortlist(){
   loadShortlist();
-  buildShortlistFilter();
   var sub=document.getElementById('shortlist-sub');
   var grid=document.getElementById('shortlist-grid');
   if(!sub||!grid)return;
-  var base=shortlist.map(function(s){return players.find(function(p){return p.id==s.id&&p.teamId==s.teamId;});}).filter(Boolean);
-
-  var q=(document.getElementById('sl-search').value||'').toLowerCase();
-  var pos=document.getElementById('sl-fpos').value;
-  var league=document.getElementById('sl-fleague').value;
-  var sort=document.getElementById('sl-fsort').value;
-  var ageMin=parseInt(document.getElementById('sl-fage_min').value)||0;
-  var ageMax=parseInt(document.getElementById('sl-fage_max').value)||99;
-
-  var list=base.filter(function(p){
-    if(q){var s=(p.name+' '+(p.teamName||'')+' '+(p.nationality||'')).toLowerCase();if(s.indexOf(q)<0)return false;}
-    if(pos&&playerCat(p)!==pos)return false;
-    if(league&&p.leagueName!==league)return false;
-    if(ageMin>0&&(p.age||0)<ageMin)return false;
-    if(ageMax<99&&(p.age||99)>ageMax)return false;
-    return true;
-  });
-
-  if(sort==='rating')list.sort(function(a,b){return(parseFloat(b.rating)||0)-(parseFloat(a.rating)||0);});
-  else if(sort==='goals')list.sort(function(a,b){return(b.goals||0)-(a.goals||0);});
-  else if(sort==='age_asc')list.sort(function(a,b){return(a.age||99)-(b.age||99);});
-  else if(sort==='age_desc')list.sort(function(a,b){return(b.age||0)-(a.age||0);});
-  else if(sort==='contract_asc')list.sort(sortByContractAsc);
-  else list.sort(function(a,b){return(a.name||'').localeCompare(b.name||'');});
-
-  sub.textContent=base.length?(list.length+' z '+base.length+' hráčů'):'0 hráčů';
+  var list=shortlist.map(function(s){return players.find(function(p){return p.id==s.id&&p.teamId==s.teamId;});}).filter(Boolean);
+  sub.textContent=list.length+' hráčů';
   grid.innerHTML='';
-  if(!base.length){
-    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><h3>Shortlist je prázdný</h3><p>Klikni na hvězdičku u hráče pro přidání.</p></div>';
-    return;
-  }
   if(!list.length){
-    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><h3>Žádní hráči</h3><p>Zkus jiný filtr.</p></div>';
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><h3>Shortlist je prázdný</h3><p>Klikni na hvězdičku u hráče pro přidání.</p></div>';
     return;
   }
   list.forEach(function(p){
@@ -463,7 +397,7 @@ function renderShortlist(){
 
     var info=document.createElement('div');
     info.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px';
-    info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(p.age||'—')+'</div></div>'
+    info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(playerAge(p)!=null?playerAge(p):'—')+'</div></div>'
       +'<div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">'+fmtHeight(p.height)+'</div></div>'
       +'<div class="ci" style="grid-column:1/-1"><div class="ci-lbl">Národnost</div><div class="ci-val">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
       +(p.goals!=null?'<div class="ci"><div class="ci-lbl">Góly/Ass</div><div class="ci-val" style="color:var(--green-dark)">'+(p.goals||0)+'/'+(p.assists||0)+'</div></div>':'')
@@ -723,47 +657,6 @@ var FL={
 };
 
 function tm(p){return tmData[String(p.id)]||{};}
-
-var CZ_MONTHS={
-  leden:0,ledna:0,
-  unor:1,unora:1,
-  brezen:2,brezna:2,
-  duben:3,dubna:3,
-  kveten:4,kvetna:4,
-  cerven:5,cervna:5,
-  cervenec:6,cervence:6,
-  srpen:7,srpna:7,
-  zari:8,
-  rijen:9,rijna:9,
-  listopad:10,listopadu:10,
-  prosinec:11,prosince:11
-};
-function stripDiacritics(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
-function parseContractDate(str){
-  if(!str) return null;
-  str=String(str).trim();
-  // DD/MM/YYYY nebo DD.MM.YYYY
-  var m=str.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})$/);
-  if(m) return new Date(parseInt(m[3]),parseInt(m[2])-1,parseInt(m[1]));
-  // D. <měsíc slovem> YYYY (česky)
-  m=str.match(/^(\d{1,2})\.\s*([A-Za-zÀ-ž]+)\s*(\d{4})$/);
-  if(m){
-    var monthIdx=CZ_MONTHS[stripDiacritics(m[2].toLowerCase())];
-    if(monthIdx!==undefined) return new Date(parseInt(m[3]),monthIdx,parseInt(m[1]));
-  }
-  // Fallback na nativní JS parser (např. anglické formáty)
-  var d=new Date(str);
-  if(!isNaN(d.getTime())) return d;
-  return null;
-}
-function sortByContractAsc(a,b){
-  var da=parseContractDate(tm(a).contractUntil);
-  var db=parseContractDate(tm(b).contractUntil);
-  if(!da&&!db)return 0;
-  if(!da)return 1;
-  if(!db)return -1;
-  return da-db;
-}
 function teamLogo(p,size){
   if(!p||!p.teamId)return '';
   size=size||20;
@@ -777,16 +670,29 @@ function leagueLogo(p,size){
 function fmtHeight(v){if(!v)return '—';v=String(v).trim();return v.includes('cm')?v:v+' cm';}
 function fmtWeight(v){if(!v)return '—';v=String(v).trim();return v.includes('kg')?v:v+' kg';}
 
-// Přepočet věku podle data narození (přesnější než statické age z API)
 function calcAge(birthDate){
-  if(!birthDate) return null;
-  var b = new Date(birthDate);
-  if(isNaN(b.getTime())) return null;
-  var today = new Date();
-  var age = today.getFullYear() - b.getFullYear();
-  var m = today.getMonth() - b.getMonth();
-  if(m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
+  if(!birthDate)return null;
+  var b=new Date(birthDate);
+  if(isNaN(b.getTime()))return null;
+  var today=new Date();
+  var age=today.getFullYear()-b.getFullYear();
+  var m=today.getMonth()-b.getMonth();
+  if(m<0||(m===0&&today.getDate()<b.getDate()))age--;
   return age;
+}
+function playerAge(p){
+  var a=calcAge(p.birthDate);
+  return a!=null?a:(p.age!=null?p.age:null);
+}
+function fmtBirthDate(v){
+  if(!v)return '—';
+  var d=new Date(v);
+  if(isNaN(d.getTime()))return '—';
+  return d.toLocaleDateString('cs-CZ');
+}
+function fullName(p){
+  if(p.firstname&&p.lastname)return (p.firstname+' '+p.lastname).trim();
+  return p.name||'—';
 }
 
 // Mapování TM pozic na API-Football kategorie
@@ -901,17 +807,6 @@ function flag(nat){var c=FL[nat];return c?'<img src="https://flagcdn.com/16x12/'
 function ll(p){var n=LN[p.leagueId]||p.leagueName||'';var c=CN[p.country]||'';return c?n+' ('+c+')':n;}
 function rc(r){r=parseFloat(r);if(!r)return'var(--text)';return r>=7.5?'#16a34a':r>=6.5?'#2563eb':r>=5.5?'#d97706':'#dc2626';}
 
-function makeInlineStar(pid,tid,size){
-  var btn=document.createElement('button');
-  btn.className='star-btn'+(isInShortlist(pid)?' active':'');
-  btn.dataset.pid=pid;
-  btn.title=isInShortlist(pid)?'Odebrat ze shortlistu':'Přidat do shortlistu';
-  btn.textContent='★';
-  btn.style.cssText='position:static;font-size:'+(size||18)+'px;flex-shrink:0';
-  (function(p,t){btn.onclick=function(e){e.stopPropagation();toggleShortlist(p,t);};})(pid,tid);
-  return btn;
-}
-
 function makeAv(url,col,name,size){
   var el=document.createElement('div');
   el.className='av';
@@ -943,10 +838,6 @@ function loadData(){
       var d=results[0];
       tmData=results[1]||{};
       players=d.players||[];
-      players.forEach(function(p){
-        var a = calcAge(p.birthDate);
-        if(a != null) p.age = a;
-      });
       if(d.meta&&d.meta.lastUpdated) document.getElementById('last-updated').textContent=new Date(d.meta.lastUpdated).toLocaleDateString('cs-CZ');
       document.getElementById('data-stats').textContent=players.length.toLocaleString()+' hráčů';
       buildFilter();
@@ -976,15 +867,15 @@ function getList(){
     if(q){var s=(p.name+' '+(p.teamName||'')+' '+(p.nationality||'')).toLowerCase();if(s.indexOf(q)<0)return false;}
     if(pos&&playerCat(p)!==pos)return false;
     if(league&&p.leagueName!==league)return false;
-    if(ageMin>0&&(p.age||0)<ageMin)return false;
-    if(ageMax<99&&(p.age||99)>ageMax)return false;
+    var pAge=playerAge(p);
+    if(ageMin>0&&(pAge||0)<ageMin)return false;
+    if(ageMax<99&&(pAge||99)>ageMax)return false;
     return true;
   });
   if(sort==='rating')list.sort(function(a,b){return(parseFloat(b.rating)||0)-(parseFloat(a.rating)||0);});
   else if(sort==='goals')list.sort(function(a,b){return(b.goals||0)-(a.goals||0);});
-  else if(sort==='age_asc')list.sort(function(a,b){return(a.age||99)-(b.age||99);});
-  else if(sort==='age_desc')list.sort(function(a,b){return(b.age||0)-(a.age||0);});
-  else if(sort==='contract_asc')list.sort(sortByContractAsc);
+  else if(sort==='age_asc')list.sort(function(a,b){return(playerAge(a)||99)-(playerAge(b)||99);});
+  else if(sort==='age_desc')list.sort(function(a,b){return(playerAge(b)||0)-(playerAge(a)||0);});
   else list.sort(function(a,b){return(a.name||'').localeCompare(b.name||'');});
   return list;
 }
@@ -1039,7 +930,7 @@ function renderPlayers(){
     // Info grid
     var info=document.createElement('div');
     info.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px';
-    info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(p.age||'—')+'</div></div>'
+    info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(playerAge(p)!=null?playerAge(p):'—')+'</div></div>'
       +'<div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">'+(fmtHeight(p.height))+'</div></div>'
       +'<div class="ci" style="grid-column:1/-1"><div class="ci-lbl">Národnost</div><div class="ci-val">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
       +(p.appearances!=null
@@ -1073,7 +964,7 @@ function openPlayer(id,teamId){
   var mav=document.getElementById('m-av');
   mav.innerHTML='';
   mav.appendChild(makeAv(p.photo,col,p.name,54));
-  document.getElementById('m-name').textContent=p.name;
+  document.getElementById('m-name').textContent=fullName(p);
   document.getElementById('m-sub').innerHTML='<span class="badge bp">'+(tm(p).position||PCS[p.position]||'—')+'</span> '+teamLogo(p,20)+' <strong>'+(p.teamName||'—')+'</strong>';
   var inC=cmpList.some(function(c){return c.id==p.id&&c.teamId==p.teamId;});
   var btn=document.getElementById('m-btn');
@@ -1083,7 +974,8 @@ function openPlayer(id,teamId){
 
   var body='<div class="igrid">'
     +'<div class="icell"><div class="ilbl">Pozice</div><div class="ival">'+(tm(p).position||(PCZK[p.position]||'—'))+'</div></div>'
-    +'<div class="icell"><div class="ilbl">Věk</div><div class="ival">'+(p.age||'—')+' let</div></div>'
+    +'<div class="icell"><div class="ilbl">Věk</div><div class="ival">'+(playerAge(p)!=null?playerAge(p)+' let':'—')+'</div></div>'
+    +'<div class="icell"><div class="ilbl">Datum narození</div><div class="ival">'+fmtBirthDate(p.birthDate)+'</div></div>'
     +'<div class="icell"><div class="ilbl">Národnost</div><div class="ival">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
     +'<div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">'+(fmtHeight(p.height))+(p.weight?' / '+fmtWeight(p.weight):'')+'</div></div>'
     +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival" style="display:flex;align-items:center;gap:6px">'+teamLogo(p,22)+'<span>'+(p.teamName||'—')+'</span></div></div>'
@@ -1366,7 +1258,7 @@ function setTowCat(cat){
 function buildTowFilter(){
   var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
   var sel=document.getElementById('tow-league');
-  if(sel.options.length<=2){
+  if(sel.options.length<=1){
     leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;sel.appendChild(o);});
   }
 }
@@ -1398,13 +1290,10 @@ function renderTow(){
   };
   var cat=cats[towCat]||cats.rating;
 
-  var isShortlistMode = league==='__shortlist__';
-
   var list=players.filter(function(p){
-    if(isShortlistMode){if(!isInShortlist(p.id))return false;}
-    else if(league&&p.leagueName!==league)return false;
+    if(league&&p.leagueName!==league)return false;
     if(pos&&playerCat(p)!==pos)return false;
-    if(towCat==='rating')return parseFloat(p.rating)&&(p.minutesPlayed||0)>=90;
+    if(towCat==='rating')return parseFloat(p.rating)&&(p.appearances||0)>=5;
     if(towCat==='points')return ((p.goals||0)+(p.assists||0))>=cat.min;
     return (p[cat.field]||0)>=cat.min;
   });
@@ -1431,7 +1320,6 @@ function renderTow(){
     var rankClass=i===0?'g':i===1?'s':i===2?'b':'';
     row.innerHTML='<div class="tow-rank '+rankClass+'">'+(i+1)+'</div>';
     row.appendChild(makeAv(p.photo,col,p.name,36));
-    row.appendChild(makeInlineStar(p.id,p.teamId,18));
     var info=document.createElement('div');
     info.style.cssText='flex:1;min-width:0';
     info.innerHTML='<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
@@ -1623,7 +1511,7 @@ function renderCompare(){
       +(p.rating?'<div style="font-size:26px;font-weight:800;color:'+rc(p.rating)+';margin:8px 0 0">'+parseFloat(p.rating).toFixed(2)+'</div><div style="font-size:10px;color:var(--muted);margin-bottom:6px">RATING</div>':'')
       +(tm(p).marketValue?'<div style="font-size:13px;font-weight:700;color:var(--green-dark)">'+tm(p).marketValue+'</div><div style="font-size:10px;color:var(--muted)">TRZ. HODNOTA</div>':'')
       +(tm(p).contractUntil?'<div style="font-size:12px;color:var(--muted);margin-top:4px">Smlouva: '+tm(p).contractUntil+'</div>':'')
-      +(p.age?'<div style="font-size:12px;color:var(--muted)">'+p.age+' let</div>':'')
+      +(playerAge(p)!=null?'<div style="font-size:12px;color:var(--muted)">'+playerAge(p)+' let</div>':'')
       ;
     var rmBtn=document.createElement('button');
     rmBtn.className='btn';
@@ -1672,13 +1560,6 @@ function renderWeekend(){
   if(!el) return;
   el.innerHTML = '<div class="empty"><h3>Načítám data...</h3></div>';
 
-  if(leagueEl && leagueEl.options.length<=2){
-    var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
-    leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;leagueEl.appendChild(o);});
-  }
-
-  var isShortlistMode = leagueFilter==='__shortlist__';
-
   var since = new Date(Date.now() - 7*24*60*60*1000).toISOString();
 
   // Použij přímý fetch pro složitější Supabase dotaz
@@ -1686,25 +1567,8 @@ function renderWeekend(){
     +'?select=player_id,rating,goals,assists,minutes,team_name,league_id,matches!inner(match_date,home_team,away_team)'
     +'&rating=not.is.null'
     +'&matches.match_date=gte.'+encodeURIComponent(since)
-    +'&order=rating.desc';
-
-  if(isShortlistMode){
-    loadShortlist();
-    var shortlistIds=shortlist.map(function(s){return s.id;});
-    if(!shortlistIds.length){
-      el.innerHTML='<div class="empty"><h3>Shortlist je prázdný</h3><p>Přidej hráče přes hvězdičku u profilu.</p></div>';
-      return;
-    }
-    url += '&player_id=in.('+shortlistIds.join(',')+')&limit=100';
-  } else {
-    url += '&limit=200';
-    if(leagueFilter){
-      var lpForId=players.find(function(p){return p.leagueName===leagueFilter;});
-      if(lpForId&&lpForId.leagueId){
-        url += '&league_id=eq.'+lpForId.leagueId;
-      }
-    }
-  }
+    +'&order=rating.desc'
+    +'&limit=200';
 
   fetch(url, {headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})
     .then(function(r){return r.json();}).then(function(data){
@@ -1719,7 +1583,7 @@ function renderWeekend(){
       return{d:d, pl:pl};
     }).filter(function(r){
       if(!r.pl) return false;
-      if(!isShortlistMode && leagueFilter && r.pl.leagueName !== leagueFilter) return false;
+      if(leagueFilter && r.pl.leagueName !== leagueFilter) return false;
       if(posFilter && playerCat(r.pl) !== posFilter) return false;
       return true;
     }).slice(0,20);
@@ -1744,7 +1608,6 @@ function renderWeekend(){
       row.onclick=function(){openPlayer(p.id,p.teamId);};
       row.innerHTML='<div class="tow-rank '+rankClass+'">'+(i+1)+'</div>';
       row.appendChild(makeAv(p.photo,col,p.name,36));
-      row.appendChild(makeInlineStar(p.id,p.teamId,18));
 
       var info=document.createElement('div');
       info.style.cssText='flex:1;min-width:0';
@@ -1773,37 +1636,6 @@ function renderWeekend(){
   });
 }
 
-function downloadTotwImage(){
-  var target=document.getElementById('totw-pitch');
-  if(!target){
-    alert('Tým týdne ještě není načtený, zkus to za chvíli.');
-    return;
-  }
-  if(typeof html2canvas==='undefined'){
-    alert('Nástroj pro export obrázku se nenačetl. Zkus obnovit stránku.');
-    return;
-  }
-  var btn=document.getElementById('totw-download-btn');
-  var origText=btn?btn.textContent:'';
-  if(btn){btn.textContent='⏳ Připravuji...';btn.disabled=true;}
-
-  html2canvas(target,{backgroundColor:'#1b5a2f',scale:3,useCORS:true}).then(function(canvas){
-    var leagueVal=document.getElementById('totw-league').value;
-    var namePart='vsechny_ligy';
-    if(leagueVal==='__shortlist__') namePart='shortlist';
-    else if(leagueVal) namePart=leagueVal.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
-    var link=document.createElement('a');
-    link.download='tym_tydne_'+namePart+'.png';
-    link.href=canvas.toDataURL('image/png');
-    link.click();
-  }).catch(function(e){
-    console.error(e);
-    alert('Export obrázku se nepovedl. Zkus to znovu.');
-  }).finally(function(){
-    if(btn){btn.textContent=origText;btn.disabled=false;}
-  });
-}
-
 function renderTotw(){
   var leagueEl=document.getElementById('totw-league');
   var leagueFilter=leagueEl?leagueEl.value:'';
@@ -1812,37 +1644,18 @@ function renderTotw(){
   el.innerHTML='<div class="empty"><h3>Načítám...</h3></div>';
 
   // Naplň filtr lig pokud ještě není
-  if(leagueEl&&leagueEl.options.length<=2){
+  if(leagueEl&&leagueEl.options.length<=1){
     var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
     leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;leagueEl.appendChild(o);});
   }
 
-  var isShortlistMode=leagueFilter==='__shortlist__';
-
   var since=new Date(Date.now()-7*24*60*60*1000).toISOString();
   var url=SUPABASE_URL+'/rest/v1/player_match_stats'
-    +'?select=player_id,rating,goals,assists,minutes,league_id,matches!inner(match_date,home_team,away_team)'
+    +'?select=player_id,rating,goals,assists,minutes,matches!inner(match_date,home_team,away_team)'
     +'&rating=not.is.null'
     +'&matches.match_date=gte.'+encodeURIComponent(since)
-    +'&order=rating.desc';
-
-  if(isShortlistMode){
-    loadShortlist();
-    var shortlistIds=shortlist.map(function(s){return s.id;});
-    if(!shortlistIds.length){
-      el.innerHTML='<div class="empty"><h3>Shortlist je prázdný</h3><p>Přidej hráče přes hvězdičku u profilu.</p></div>';
-      return;
-    }
-    url += '&player_id=in.('+shortlistIds.join(',')+')&limit=500';
-  } else {
-    url += '&limit=500';
-    if(leagueFilter){
-      var lpForId=players.find(function(p){return p.leagueName===leagueFilter;});
-      if(lpForId&&lpForId.leagueId){
-        url += '&league_id=eq.'+lpForId.leagueId;
-      }
-    }
-  }
+    +'&order=rating.desc'
+    +'&limit=500';
 
   fetch(url,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})
     .then(function(r){return r.json();})
@@ -1883,7 +1696,7 @@ function renderTotw(){
       records.forEach(function(d){
         var pl=players.find(function(p){return p.id==d.player_id;});
         if(!pl)return;
-        if(!isShortlistMode&&leagueFilter&&pl.leagueName!==leagueFilter)return;
+        if(leagueFilter&&pl.leagueName!==leagueFilter)return;
         if(usedPlayers[pl.id])return;
 
         var tmPos=tm(pl).position;
@@ -1923,37 +1736,32 @@ function renderTotw(){
 
       // Hřiště SVG
       var W=440,H=620;
-      var pitch='<div id="totw-pitch" style="position:relative;max-width:'+W+'px;margin:0 auto;border-radius:18px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.3);background:radial-gradient(ellipse 90% 75% at 50% 38%, #3fae57 0%, #2c8a45 55%, #1b5a2f 100%)">'
-        // Diagonální sekání trávy
-        +'<div style="position:absolute;inset:0;background:repeating-linear-gradient(115deg, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 34px, transparent 34px, transparent 68px)"></div>'
-        +'<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="position:relative;width:100%;display:block">'
+      var pitch='<div style="position:relative;max-width:'+W+'px;margin:0 auto">'
+        +'<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;border-radius:12px">'
+        // Zelené pozadí
+        +'<rect width="'+W+'" height="'+H+'" fill="#2d7a3a"/>'
+        // Pruhy
+        +Array.from({length:8},function(_,i){return '<rect x="0" y="'+(i*H/8)+'" width="'+W+'" height="'+(H/16)+'" fill="rgba(0,0,0,0.04)"/>';}).join('')
         // Čáry hřiště
-        +'<rect x="20" y="20" width="'+(W-40)+'" height="'+(H-40)+'" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>'
+        +'<rect x="20" y="20" width="'+(W-40)+'" height="'+(H-40)+'" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
         // Středová čára
-        +'<line x1="20" y1="'+(H/2)+'" x2="'+(W-20)+'" y2="'+(H/2)+'" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>'
+        +'<line x1="20" y1="'+(H/2)+'" x2="'+(W-20)+'" y2="'+(H/2)+'" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
         // Středový kruh
-        +'<circle cx="'+(W/2)+'" cy="'+(H/2)+'" r="60" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>'
-        +'<circle cx="'+(W/2)+'" cy="'+(H/2)+'" r="3" fill="rgba(255,255,255,0.8)"/>'
+        +'<circle cx="'+(W/2)+'" cy="'+(H/2)+'" r="60" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
+        +'<circle cx="'+(W/2)+'" cy="'+(H/2)+'" r="3" fill="rgba(255,255,255,0.7)"/>'
         // Velké vápno nahoře
-        +'<rect x="'+(W/2-80)+'" y="20" width="160" height="80" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>'
+        +'<rect x="'+(W/2-80)+'" y="20" width="160" height="80" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
         // Malé vápno nahoře
-        +'<rect x="'+(W/2-40)+'" y="20" width="80" height="35" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>'
+        +'<rect x="'+(W/2-40)+'" y="20" width="80" height="35" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
         // Velké vápno dole
-        +'<rect x="'+(W/2-80)+'" y="'+(H-100)+'" width="160" height="80" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>'
+        +'<rect x="'+(W/2-80)+'" y="'+(H-100)+'" width="160" height="80" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
         // Malé vápno dole
-        +'<rect x="'+(W/2-40)+'" y="'+(H-55)+'" width="80" height="35" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>'
+        +'<rect x="'+(W/2-40)+'" y="'+(H-55)+'" width="80" height="35" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
         // Penaltový puntík nahoře
-        +'<circle cx="'+(W/2)+'" cy="75" r="3" fill="rgba(255,255,255,0.8)"/>'
+        +'<circle cx="'+(W/2)+'" cy="75" r="3" fill="rgba(255,255,255,0.7)"/>'
         // Penaltový puntík dole
-        +'<circle cx="'+(W/2)+'" cy="'+(H-75)+'" r="3" fill="rgba(255,255,255,0.8)"/>'
-        // Rohové oblouky
-        +'<path d="M 20 32 A 12 12 0 0 1 32 20" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
-        +'<path d="M '+(W-32)+' 20 A 12 12 0 0 1 '+(W-20)+' 32" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
-        +'<path d="M '+(W-20)+' '+(H-32)+' A 12 12 0 0 1 '+(W-32)+' '+(H-20)+'" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
-        +'<path d="M 32 '+(H-20)+' A 12 12 0 0 1 20 '+(H-32)+'" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>'
+        +'<circle cx="'+(W/2)+'" cy="'+(H-75)+'" r="3" fill="rgba(255,255,255,0.7)"/>'
         +'</svg>'
-        // Vinětace pro hloubku
-        +'<div style="position:absolute;inset:0;background:radial-gradient(ellipse 85% 75% at 50% 42%, transparent 55%, rgba(0,0,0,0.32) 100%)"></div>'
         // Hráči — absolutně pozicováni přes hřiště
         +'<div style="position:absolute;top:0;left:0;right:0;bottom:0">';
 
@@ -1961,30 +1769,24 @@ function renderTotw(){
         var entry=slots[pos.slot];
         var xPct=pos.x, yPct=pos.y;
         var rating=entry?parseFloat(entry.d.rating):null;
-        var ringCol='#ffffff';
-        var badgeCol='#3ab54a';
+        var rCol=rating?rc(rating):'#aaa';
 
         var photoHtml='';
-        var sz=62;
+        var sz=54;
         if(entry&&entry.pl.photo){
-          photoHtml='<div style="width:'+(sz+8)+'px;height:'+(sz+8)+'px;border-radius:50%;background:'+ringCol+';display:flex;align-items:center;justify-content:center;padding:3px;box-shadow:0 4px 12px rgba(0,0,0,0.45)">'
-            +'<img src="'+entry.pl.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid white;display:block">'
-            +'</div>';
+          photoHtml='<img src="'+entry.pl.photo+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;object-fit:cover;border:3px solid white;display:block;box-shadow:0 2px 8px rgba(0,0,0,0.4)">';
         } else {
-          var ph=entry?ringCol:'rgba(255,255,255,0.25)';
-          photoHtml='<div style="width:'+(sz+8)+'px;height:'+(sz+8)+'px;border-radius:50%;background:'+ph+';display:flex;align-items:center;justify-content:center;padding:3px;box-shadow:0 4px 12px rgba(0,0,0,0.4)">'
-            +'<div style="width:100%;height:100%;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:20px;color:rgba(255,255,255,0.7)">?</div>'
-            +'</div>';
+          photoHtml='<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:rgba(255,255,255,0.15);border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:20px;color:rgba(255,255,255,0.5)">?</div>';
         }
 
         // Team logo badge
         var teamLogoHtml='';
         if(entry&&entry.pl.teamId){
-          teamLogoHtml='<img src="https://media.api-sports.io/football/teams/'+entry.pl.teamId+'.png" style="width:26px;height:26px;object-fit:contain;position:absolute;bottom:-3px;right:0px;background:white;border-radius:50%;padding:2px;box-shadow:0 2px 5px rgba(0,0,0,0.4);border:1.5px solid white">';
+          teamLogoHtml='<img src="https://media.api-sports.io/football/teams/'+entry.pl.teamId+'.png" style="width:18px;height:18px;object-fit:contain;position:absolute;bottom:0;right:0;background:white;border-radius:50%;padding:1px;box-shadow:0 1px 3px rgba(0,0,0,0.3)">';
         }
 
         var nameHtml=entry?entry.pl.name.split(' ').pop():'—';
-        var ratingHtml=rating?'<div style="font-size:12px;font-weight:800;color:white;background:'+badgeCol+';border-radius:20px;padding:2px 10px;margin-top:5px;display:inline-block;box-shadow:0 2px 6px rgba(0,0,0,0.35);letter-spacing:.3px">'+rating.toFixed(1)+'</div>':'';
+        var ratingHtml=rating?'<div style="font-size:12px;font-weight:800;color:'+rCol+';background:white;border-radius:5px;padding:1px 7px;margin-top:3px;display:inline-block;box-shadow:0 1px 4px rgba(0,0,0,0.2)">'+rating.toFixed(1)+'</div>':'';
 
         var clickFn=entry?'openPlayer('+entry.pl.id+','+entry.pl.teamId+')':'';
 
@@ -1993,15 +1795,10 @@ function renderTotw(){
           +photoHtml
           +teamLogoHtml
           +'</div>'
-          +'<div style="font-size:11px;font-weight:800;color:white;text-shadow:0 1px 6px rgba(0,0,0,0.9);margin-top:5px;white-space:nowrap;letter-spacing:.4px;text-transform:uppercase">'+nameHtml+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:white;text-shadow:0 1px 4px rgba(0,0,0,0.9);margin-top:3px;white-space:nowrap">'+nameHtml+'</div>'
           +ratingHtml
           +'</div>';
       });
-
-      pitch+='<div style="position:absolute;bottom:10px;right:10px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.5);padding:5px 10px 5px 5px;border-radius:20px">'
-        +'<img src="logo.jpg" style="width:20px;height:20px;border-radius:6px;object-fit:cover;display:block" onerror="this.style.display=\'none\'">'
-        +'<span style="color:white;font-size:11px;font-weight:800;letter-spacing:.3px;white-space:nowrap">FM<span style="color:#3ab54a">Scouts</span></span>'
-        +'</div>';
 
       pitch+='</div></div>';
       el.innerHTML=pitch;
@@ -2021,11 +1818,10 @@ function renderTotw(){
         var av=document.createElement('div');
         av.appendChild(makeAv(pl.photo,PC[pl.position]||'#3ab54a',pl.name,32));
         row.appendChild(av);
-        row.appendChild(makeInlineStar(pl.id,pl.teamId,18));
         var info=document.createElement('div');
         info.style.cssText='flex:1;min-width:0';
         info.innerHTML='<div style="font-size:13px;font-weight:700">'+pl.name+'</div>'
-          +'<div style="font-size:11px;color:var(--muted);margin-top:1px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+teamLogo(pl,14)+'<span>'+pl.teamName+'</span><span>·</span>'+leagueLogo(pl,12)+'<span>'+ll(pl)+'</span></div>';
+          +'<div style="font-size:11px;color:var(--muted)">'+pl.teamName+' · '+ll(pl)+'</div>';
         row.appendChild(info);
         var rEl=document.createElement('div');
         rEl.innerHTML='<div style="font-size:16px;font-weight:800;color:'+rc(rating)+'">'+rating.toFixed(2)+'</div>'
