@@ -94,7 +94,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .tow-cat{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--s1);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;white-space:nowrap}
 .tow-cat:hover{border-color:var(--green);color:var(--green)}
 .tow-cat.active{background:var(--green);color:#fff;border-color:var(--green)}
-.tow-row{background:var(--s1);border:1.5px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .12s;margin-bottom:8px}
+.tow-row{background:var(--s1);border:1.5px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .12s;margin-bottom:8px;position:relative}
 .tow-row:hover{border-color:var(--green-border);transform:translateY(-1px)}
 .tow-rank{font-size:15px;font-weight:800;color:var(--muted);min-width:22px}
 .tow-rank.g{color:#ca8a04}.tow-rank.s{color:#64748b}.tow-rank.b{color:#92400e}
@@ -129,6 +129,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .star-btn:hover{opacity:1;transform:scale(1.2)}
 .star-btn.active{opacity:1;color:#f59e0b}
 .card{position:relative}
+.row-star-btn{position:static;font-size:17px;flex-shrink:0}
+.chk-lbl{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);background:var(--s1);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:8px 12px;cursor:pointer;user-select:none}
+.chk-lbl input{cursor:pointer}
+.chk-lbl.active{border-color:var(--green);color:var(--green-dark);background:var(--green-bg)}
 </style>
 </head>
 <body>
@@ -206,9 +210,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <option value="name">Jméno A–Z</option>
         <option value="age_asc">Věk ↑</option>
         <option value="age_desc">Věk ↓</option>
+        <option value="contract_asc">Konec smlouvy ↑</option>
       </select>
       <input class="inp" type="number" id="fage_min" placeholder="Věk od" min="15" max="45" style="width:90px" oninput="renderPlayers()">
       <input class="inp" type="number" id="fage_max" placeholder="Věk do" min="15" max="45" style="width:90px" oninput="renderPlayers()">
+      <select class="inp" id="fcontract" onchange="renderPlayers()">
+        <option value="">Smlouva — všechny</option>
+        <option value="6m">Konci do 6 měsíců</option>
+        <option value="1y">Konci do 1 roku</option>
+        <option value="free">Bez známé smlouvy</option>
+      </select>
     </div>
     <div class="grid" id="pgrid"></div>
   </div>
@@ -227,6 +238,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <option value="Midfielder">Záložníci</option>
         <option value="Attacker">Útočníci</option>
       </select>
+      <label class="chk-lbl" id="tow-shortlist-lbl">
+        <input type="checkbox" id="tow-shortlist-only" onchange="renderTow()"> ⭐ Jen shortlist
+      </label>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap" id="tow-cats">
       <button class="tow-cat active" onclick="setTowCat('rating')">⭐ Rating</button>
@@ -265,6 +279,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <option value="Midfielder">Záložníci</option>
         <option value="Attacker">Útočníci</option>
       </select>
+      <label class="chk-lbl" id="weekend-shortlist-lbl">
+        <input type="checkbox" id="weekend-shortlist-only" onchange="renderWeekend()"> ⭐ Jen shortlist
+      </label>
     </div>
     <div id="weekend-list"><div class="empty"><h3>Načítám...</h3></div></div>
   </div>
@@ -278,10 +295,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="view" id="view-totw">
     <div class="page-title">Tým týdne</div>
     <div class="page-sub">Nejlepší hráči dle ratingu za posledních 7 dní</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
       <select class="inp" id="totw-league" onchange="renderTotw()">
         <option value="">Všechny ligy</option>
       </select>
+      <label class="chk-lbl" id="totw-shortlist-lbl">
+        <input type="checkbox" id="totw-shortlist-only" onchange="renderTotw()"> ⭐ Jen shortlist
+      </label>
+      <button class="btn primary" id="totw-download-btn" style="width:auto;padding:9px 16px" onclick="downloadTotw()">⬇ Stáhnout jako obrázek</button>
     </div>
     <div id="totw-content"><div class="empty"><h3>Načítám...</h3></div></div>
   </div>
@@ -345,6 +366,17 @@ function toggleShortlist(id,teamId){
   if(document.getElementById('view-shortlist').style.display!=='none') renderShortlist();
 }
 
+function makeStarBtn(p,size){
+  var star=document.createElement('button');
+  star.className='star-btn'+(isInShortlist(p.id)?' active':'');
+  if(size==='row') star.classList.add('row-star-btn');
+  star.dataset.pid=p.id;
+  star.title=isInShortlist(p.id)?'Odebrat ze shortlistu':'Přidat do shortlistu';
+  star.textContent='★';
+  (function(pid,tid){star.onclick=function(e){e.stopPropagation();toggleShortlist(pid,tid);};})(p.id,p.teamId);
+  return star;
+}
+
 function renderShortlist(){
   loadShortlist();
   var sub=document.getElementById('shortlist-sub');
@@ -365,14 +397,7 @@ function renderShortlist(){
     card.className='card'+(inC?' pinned':'');
     card.onclick=function(){openPlayer(p.id,p.teamId);};
 
-    // Star button
-    var star=document.createElement('button');
-    star.className='star-btn active';
-    star.dataset.pid=p.id;
-    star.title='Odebrat ze shortlistu';
-    star.textContent='★';
-    (function(pid,tid){star.onclick=function(e){e.stopPropagation();toggleShortlist(pid,tid);};})(p.id,p.teamId);
-    card.appendChild(star);
+    card.appendChild(makeStarBtn(p));
 
     var photoWrap=document.createElement('div');
     photoWrap.style.cssText='display:flex;justify-content:center;margin-bottom:10px';
@@ -397,7 +422,7 @@ function renderShortlist(){
 
     var info=document.createElement('div');
     info.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px';
-    info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(playerAge(p)!=null?playerAge(p):'—')+'</div></div>'
+    info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(p.age||'—')+'</div></div>'
       +'<div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">'+fmtHeight(p.height)+'</div></div>'
       +'<div class="ci" style="grid-column:1/-1"><div class="ci-lbl">Národnost</div><div class="ci-val">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
       +(p.goals!=null?'<div class="ci"><div class="ci-lbl">Góly/Ass</div><div class="ci-val" style="color:var(--green-dark)">'+(p.goals||0)+'/'+(p.assists||0)+'</div></div>':'')
@@ -670,29 +695,33 @@ function leagueLogo(p,size){
 function fmtHeight(v){if(!v)return '—';v=String(v).trim();return v.includes('cm')?v:v+' cm';}
 function fmtWeight(v){if(!v)return '—';v=String(v).trim();return v.includes('kg')?v:v+' kg';}
 
-function calcAge(birthDate){
-  if(!birthDate)return null;
-  var b=new Date(birthDate);
-  if(isNaN(b.getTime()))return null;
-  var today=new Date();
-  var age=today.getFullYear()-b.getFullYear();
-  var m=today.getMonth()-b.getMonth();
-  if(m<0||(m===0&&today.getDate()<b.getDate()))age--;
-  return age;
+// ── Kontrakt / smlouva pomocné funkce ──────────────────────────────────────
+var CZ_MONTHS={leden:0,unor:1,'únor':1,brezen:2,'březen':2,duben:3,kveten:4,'květen':4,cerven:5,'červen':5,cervenec:6,'červenec':6,srpen:7,zari:8,'září':8,rijen:9,'říjen':9,listopad:10,listopadu:10,prosinec:11};
+var EN_MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function parseContractDate(str){
+  if(!str)return null;
+  var s=String(str).toLowerCase().trim();
+  var yearMatch=s.match(/(20\d{2})/);
+  if(!yearMatch)return null;
+  var year=parseInt(yearMatch[1],10);
+  // numeric DD.MM.YYYY or MM/DD/YYYY
+  var numMatch=s.match(/(\d{1,2})[.\/](\d{1,2})[.\/]20\d{2}/);
+  if(numMatch){
+    var a=parseInt(numMatch[1],10),b=parseInt(numMatch[2],10);
+    var month=(a>12)?b-1:(b>12?a-1:b-1); // assume DD.MM common in CZ pages
+    if(month<0||month>11)month=0;
+    return new Date(year,month,1);
+  }
+  var monthIdx=null;
+  for(var k in CZ_MONTHS){ if(s.indexOf(k)>=0){monthIdx=CZ_MONTHS[k];break;} }
+  if(monthIdx===null){ for(var k2 in EN_MONTHS){ if(s.indexOf(k2)>=0){monthIdx=EN_MONTHS[k2];break;} } }
+  if(monthIdx===null)monthIdx=0;
+  return new Date(year,monthIdx,1);
 }
-function playerAge(p){
-  var a=calcAge(p.birthDate);
-  return a!=null?a:(p.age!=null?p.age:null);
-}
-function fmtBirthDate(v){
-  if(!v)return '—';
-  var d=new Date(v);
-  if(isNaN(d.getTime()))return '—';
-  return d.toLocaleDateString('cs-CZ');
-}
-function fullName(p){
-  if(p.firstname&&p.lastname)return (p.firstname+' '+p.lastname).trim();
-  return p.name||'—';
+function contractStatus(p){
+  var c=tm(p).contractUntil;
+  if(!c)return null;
+  return parseContractDate(c);
 }
 
 // Mapování TM pozic na API-Football kategorie
@@ -863,19 +892,39 @@ function getList(){
   var sort=document.getElementById('fsort').value;
   var ageMin=parseInt(document.getElementById('fage_min').value)||0;
   var ageMax=parseInt(document.getElementById('fage_max').value)||99;
+  var contractFilter=document.getElementById('fcontract')?document.getElementById('fcontract').value:'';
+  var now=new Date();
+  var in6m=new Date();in6m.setMonth(in6m.getMonth()+6);
+  var in1y=new Date();in1y.setFullYear(in1y.getFullYear()+1);
   var list=players.filter(function(p){
     if(q){var s=(p.name+' '+(p.teamName||'')+' '+(p.nationality||'')).toLowerCase();if(s.indexOf(q)<0)return false;}
     if(pos&&playerCat(p)!==pos)return false;
     if(league&&p.leagueName!==league)return false;
-    var pAge=playerAge(p);
-    if(ageMin>0&&(pAge||0)<ageMin)return false;
-    if(ageMax<99&&(pAge||99)>ageMax)return false;
+    if(ageMin>0&&(p.age||0)<ageMin)return false;
+    if(ageMax<99&&(p.age||99)>ageMax)return false;
+    if(contractFilter){
+      var cd=contractStatus(p);
+      if(contractFilter==='free'){
+        if(cd)return false;
+      } else {
+        if(!cd)return false;
+        if(contractFilter==='6m'&&cd>in6m)return false;
+        if(contractFilter==='1y'&&cd>in1y)return false;
+      }
+    }
     return true;
   });
   if(sort==='rating')list.sort(function(a,b){return(parseFloat(b.rating)||0)-(parseFloat(a.rating)||0);});
   else if(sort==='goals')list.sort(function(a,b){return(b.goals||0)-(a.goals||0);});
-  else if(sort==='age_asc')list.sort(function(a,b){return(playerAge(a)||99)-(playerAge(b)||99);});
-  else if(sort==='age_desc')list.sort(function(a,b){return(playerAge(b)||0)-(playerAge(a)||0);});
+  else if(sort==='age_asc')list.sort(function(a,b){return(a.age||99)-(b.age||99);});
+  else if(sort==='age_desc')list.sort(function(a,b){return(b.age||0)-(a.age||0);});
+  else if(sort==='contract_asc')list.sort(function(a,b){
+    var ca=contractStatus(a),cb=contractStatus(b);
+    if(!ca&&!cb)return 0;
+    if(!ca)return 1;
+    if(!cb)return -1;
+    return ca-cb;
+  });
   else list.sort(function(a,b){return(a.name||'').localeCompare(b.name||'');});
   return list;
 }
@@ -894,14 +943,7 @@ function renderPlayers(){
     card.className='card'+(inC?' pinned':'');
     card.onclick=function(){openPlayer(p.id,p.teamId);};
 
-    // Star button
-    var starBtn=document.createElement('button');
-    starBtn.className='star-btn'+(isInShortlist(p.id)?' active':'');
-    starBtn.dataset.pid=p.id;
-    starBtn.title=isInShortlist(p.id)?'Odebrat ze shortlistu':'Přidat do shortlistu';
-    starBtn.textContent='★';
-    (function(pid,tid){starBtn.onclick=function(e){e.stopPropagation();toggleShortlist(pid,tid);};})(p.id,p.teamId);
-    card.appendChild(starBtn);
+    card.appendChild(makeStarBtn(p));
 
     // Photo
     var photoWrap=document.createElement('div');
@@ -930,7 +972,7 @@ function renderPlayers(){
     // Info grid
     var info=document.createElement('div');
     info.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px';
-    info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(playerAge(p)!=null?playerAge(p):'—')+'</div></div>'
+    info.innerHTML='<div class="ci"><div class="ci-lbl">Věk</div><div class="ci-val">'+(p.age||'—')+'</div></div>'
       +'<div class="ci"><div class="ci-lbl">Výška</div><div class="ci-val">'+(fmtHeight(p.height))+'</div></div>'
       +'<div class="ci" style="grid-column:1/-1"><div class="ci-lbl">Národnost</div><div class="ci-val">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
       +(p.appearances!=null
@@ -964,7 +1006,7 @@ function openPlayer(id,teamId){
   var mav=document.getElementById('m-av');
   mav.innerHTML='';
   mav.appendChild(makeAv(p.photo,col,p.name,54));
-  document.getElementById('m-name').textContent=fullName(p);
+  document.getElementById('m-name').textContent=p.name;
   document.getElementById('m-sub').innerHTML='<span class="badge bp">'+(tm(p).position||PCS[p.position]||'—')+'</span> '+teamLogo(p,20)+' <strong>'+(p.teamName||'—')+'</strong>';
   var inC=cmpList.some(function(c){return c.id==p.id&&c.teamId==p.teamId;});
   var btn=document.getElementById('m-btn');
@@ -974,8 +1016,7 @@ function openPlayer(id,teamId){
 
   var body='<div class="igrid">'
     +'<div class="icell"><div class="ilbl">Pozice</div><div class="ival">'+(tm(p).position||(PCZK[p.position]||'—'))+'</div></div>'
-    +'<div class="icell"><div class="ilbl">Věk</div><div class="ival">'+(playerAge(p)!=null?playerAge(p)+' let':'—')+'</div></div>'
-    +'<div class="icell"><div class="ilbl">Datum narození</div><div class="ival">'+fmtBirthDate(p.birthDate)+'</div></div>'
+    +'<div class="icell"><div class="ilbl">Věk</div><div class="ival">'+(p.age||'—')+' let</div></div>'
     +'<div class="icell"><div class="ilbl">Národnost</div><div class="ival">'+flag(p.nationality)+(p.nationality||'—')+'</div></div>'
     +'<div class="icell"><div class="ilbl">Výška / Váha</div><div class="ival">'+(fmtHeight(p.height))+(p.weight?' / '+fmtWeight(p.weight):'')+'</div></div>'
     +'<div class="icell" style="grid-column:1/-1"><div class="ilbl">Klub</div><div class="ival" style="display:flex;align-items:center;gap:6px">'+teamLogo(p,22)+'<span>'+(p.teamName||'—')+'</span></div></div>'
@@ -1267,6 +1308,9 @@ function renderTow(){
   buildTowFilter();
   var league=document.getElementById('tow-league').value;
   var pos=document.getElementById('tow-pos').value;
+  var shortlistOnly=document.getElementById('tow-shortlist-only')&&document.getElementById('tow-shortlist-only').checked;
+  var lbl=document.getElementById('tow-shortlist-lbl');
+  if(lbl)lbl.classList.toggle('active',shortlistOnly);
 
   var cats={
     rating:{field:'rating',label:'Rating',fmt:function(v){return parseFloat(v).toFixed(2);},min:5,col:function(p){return rc(p.rating);}},
@@ -1293,6 +1337,7 @@ function renderTow(){
   var list=players.filter(function(p){
     if(league&&p.leagueName!==league)return false;
     if(pos&&playerCat(p)!==pos)return false;
+    if(shortlistOnly&&!isInShortlist(p.id))return false;
     if(towCat==='rating')return parseFloat(p.rating)&&(p.appearances||0)>=5;
     if(towCat==='points')return ((p.goals||0)+(p.assists||0))>=cat.min;
     return (p[cat.field]||0)>=cat.min;
@@ -1331,6 +1376,7 @@ function renderTow(){
     valEl.innerHTML='<div style="font-size:17px;font-weight:800;color:'+cat.col(p)+'">'+cat.fmt(val)+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+cat.label+'</div>';
     row.appendChild(valEl);
+    row.appendChild(makeStarBtn(p,'row'));
     el.appendChild(row);
   });
 }
@@ -1511,7 +1557,7 @@ function renderCompare(){
       +(p.rating?'<div style="font-size:26px;font-weight:800;color:'+rc(p.rating)+';margin:8px 0 0">'+parseFloat(p.rating).toFixed(2)+'</div><div style="font-size:10px;color:var(--muted);margin-bottom:6px">RATING</div>':'')
       +(tm(p).marketValue?'<div style="font-size:13px;font-weight:700;color:var(--green-dark)">'+tm(p).marketValue+'</div><div style="font-size:10px;color:var(--muted)">TRZ. HODNOTA</div>':'')
       +(tm(p).contractUntil?'<div style="font-size:12px;color:var(--muted);margin-top:4px">Smlouva: '+tm(p).contractUntil+'</div>':'')
-      +(playerAge(p)!=null?'<div style="font-size:12px;color:var(--muted)">'+playerAge(p)+' let</div>':'')
+      +(p.age?'<div style="font-size:12px;color:var(--muted)">'+p.age+' let</div>':'')
       ;
     var rmBtn=document.createElement('button');
     rmBtn.className='btn';
@@ -1551,11 +1597,23 @@ function renderCompare(){
   el.appendChild(pizzaEl);
 }
 
+function buildWeekendFilter(){
+  var leagues=[...new Set(players.map(function(p){return p.leagueName;}).filter(Boolean))].sort();
+  var sel=document.getElementById('weekend-league');
+  if(sel&&sel.options.length<=1){
+    leagues.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;sel.appendChild(o);});
+  }
+}
+
 function renderWeekend(){
+  buildWeekendFilter();
   var leagueEl = document.getElementById('weekend-league');
   var posEl = document.getElementById('weekend-pos');
   var leagueFilter = leagueEl ? leagueEl.value : '';
   var posFilter = posEl ? posEl.value : '';
+  var shortlistOnly=document.getElementById('weekend-shortlist-only')&&document.getElementById('weekend-shortlist-only').checked;
+  var lbl=document.getElementById('weekend-shortlist-lbl');
+  if(lbl)lbl.classList.toggle('active',shortlistOnly);
   var el = document.getElementById('weekend-list');
   if(!el) return;
   el.innerHTML = '<div class="empty"><h3>Načítám data...</h3></div>';
@@ -1585,6 +1643,7 @@ function renderWeekend(){
       if(!r.pl) return false;
       if(leagueFilter && r.pl.leagueName !== leagueFilter) return false;
       if(posFilter && playerCat(r.pl) !== posFilter) return false;
+      if(shortlistOnly && !isInShortlist(r.pl.id)) return false;
       return true;
     }).slice(0,20);
 
@@ -1629,6 +1688,7 @@ function renderWeekend(){
       rEl.innerHTML='<div style="font-size:18px;font-weight:800;color:'+rc(rating)+'">'+rating.toFixed(2)+'</div>'
         +'<div style="font-size:10px;color:var(--muted)">rating</div>';
       row.appendChild(rEl);
+      row.appendChild(makeStarBtn(p,'row'));
       el.appendChild(row);
     });
   }).catch(function(){
@@ -1636,9 +1696,14 @@ function renderWeekend(){
   });
 }
 
+var lastTotwSlots=null, lastTotwFormation=null;
+
 function renderTotw(){
   var leagueEl=document.getElementById('totw-league');
   var leagueFilter=leagueEl?leagueEl.value:'';
+  var shortlistOnly=document.getElementById('totw-shortlist-only')&&document.getElementById('totw-shortlist-only').checked;
+  var lbl=document.getElementById('totw-shortlist-lbl');
+  if(lbl)lbl.classList.toggle('active',shortlistOnly);
   var el=document.getElementById('totw-content');
   if(!el)return;
   el.innerHTML='<div class="empty"><h3>Načítám...</h3></div>';
@@ -1697,6 +1762,7 @@ function renderTotw(){
         var pl=players.find(function(p){return p.id==d.player_id;});
         if(!pl)return;
         if(leagueFilter&&pl.leagueName!==leagueFilter)return;
+        if(shortlistOnly&&!isInShortlist(pl.id))return;
         if(usedPlayers[pl.id])return;
 
         var tmPos=tm(pl).position;
@@ -1731,6 +1797,9 @@ function renderTotw(){
         {slot:'LW',  x:18, y:33, label:'LW'},
         {slot:'ST',  x:50, y:15, label:'ST'},
       ];
+
+      lastTotwSlots=slots;
+      lastTotwFormation=formation;
 
       el.innerHTML='';
 
@@ -1835,6 +1904,96 @@ function renderTotw(){
     });
 }
 
+// Stažení sestavy "Tým týdne" jako obrázek — vytvoří čisté SVG (bez závislosti na DOM overlay)
+// a pokusí se ho převést na PNG přes canvas; pokud fotky z externí domény canvas "zašpiní"
+// (chybí CORS hlavičky), stáhne se místo toho SVG soubor, který jde otevřít v prohlížeči.
+function buildTotwSvgString(){
+  if(!lastTotwSlots||!lastTotwFormation)return null;
+  var slots=lastTotwSlots, formation=lastTotwFormation;
+  var W=440,H=680;
+  var s='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'">';
+  s+='<rect width="'+W+'" height="'+H+'" fill="#141a14"/>';
+  s+='<text x="'+(W/2)+'" y="26" text-anchor="middle" font-family="Arial" font-size="18" font-weight="800" fill="white">Tým týdne — FMScouts</text>';
+  var pitchY=44, pitchH=H-70;
+  s+='<g transform="translate(0,'+pitchY+')">';
+  s+='<rect width="'+W+'" height="'+pitchH+'" fill="#2d7a3a"/>';
+  for(var i=0;i<8;i++){s+='<rect x="0" y="'+(i*pitchH/8)+'" width="'+W+'" height="'+(pitchH/16)+'" fill="rgba(0,0,0,0.04)"/>';}
+  s+='<rect x="20" y="20" width="'+(W-40)+'" height="'+(pitchH-40)+'" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>';
+  s+='<line x1="20" y1="'+(pitchH/2)+'" x2="'+(W-20)+'" y2="'+(pitchH/2)+'" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>';
+  s+='<circle cx="'+(W/2)+'" cy="'+(pitchH/2)+'" r="60" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>';
+  s+='<rect x="'+(W/2-80)+'" y="20" width="160" height="80" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>';
+  s+='<rect x="'+(W/2-80)+'" y="'+(pitchH-100)+'" width="160" height="80" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>';
+
+  formation.forEach(function(pos){
+    var entry=slots[pos.slot];
+    var cx=W*pos.x/100, cy=pitchH*pos.y/100;
+    var r=27;
+    if(entry&&entry.pl.photo){
+      s+='<clipPath id="cl'+pos.slot+'"><circle cx="'+cx+'" cy="'+cy+'" r="'+r+'"/></clipPath>';
+      s+='<image href="'+entry.pl.photo+'" x="'+(cx-r)+'" y="'+(cy-r)+'" width="'+(2*r)+'" height="'+(2*r)+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#cl'+pos.slot+')"/>';
+      s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="white" stroke-width="3"/>';
+    } else {
+      s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="3"/>';
+      s+='<text x="'+cx+'" y="'+(cy+6)+'" text-anchor="middle" font-family="Arial" font-size="20" fill="rgba(255,255,255,0.6)">?</text>';
+    }
+    var name=entry?entry.pl.name.split(' ').pop():'—';
+    s+='<text x="'+cx+'" y="'+(cy+r+16)+'" text-anchor="middle" font-family="Arial" font-size="11" font-weight="700" fill="white">'+name+'</text>';
+    if(entry){
+      var rating=parseFloat(entry.d.rating);
+      s+='<rect x="'+(cx-16)+'" y="'+(cy+r+22)+'" width="32" height="16" rx="4" fill="white"/>';
+      s+='<text x="'+cx+'" y="'+(cy+r+34)+'" text-anchor="middle" font-family="Arial" font-size="11" font-weight="800" fill="'+rc(rating)+'">'+rating.toFixed(1)+'</text>';
+    }
+  });
+  s+='</g>';
+  s+='<text x="'+(W/2)+'" y="'+(H-14)+'" text-anchor="middle" font-family="Arial" font-size="10" fill="rgba(255,255,255,0.4)">fmscouts-app.vercel.app</text>';
+  s+='</svg>';
+  return s;
+}
+
+function downloadTotw(){
+  var svgStr=buildTotwSvgString();
+  if(!svgStr){alert('Nejdřív počkej, až se tým týdne načte.');return;}
+  var btn=document.getElementById('totw-download-btn');
+  var origText=btn?btn.textContent:'';
+  if(btn){btn.textContent='⏳ Generuji...';btn.disabled=true;}
+
+  var svgBlob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
+  var url=URL.createObjectURL(svgBlob);
+  var img=new Image();
+  img.crossOrigin='anonymous';
+  img.onload=function(){
+    try{
+      var canvas=document.createElement('canvas');
+      canvas.width=440;canvas.height=680;
+      var ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,440,680);
+      var pngUrl=canvas.toDataURL('image/png');
+      var a=document.createElement('a');
+      a.href=pngUrl;
+      a.download='tym-tydne-fmscouts.png';
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }catch(e){
+      // Canvas je "zašpiněný" fotkami z jiné domény bez CORS — stáhni místo toho SVG
+      var a2=document.createElement('a');
+      a2.href=url;
+      a2.download='tym-tydne-fmscouts.svg';
+      document.body.appendChild(a2);a2.click();document.body.removeChild(a2);
+    } finally {
+      URL.revokeObjectURL(url);
+      if(btn){btn.textContent=origText;btn.disabled=false;}
+    }
+  };
+  img.onerror=function(){
+    var a2=document.createElement('a');
+    a2.href=url;
+    a2.download='tym-tydne-fmscouts.svg';
+    document.body.appendChild(a2);a2.click();document.body.removeChild(a2);
+    URL.revokeObjectURL(url);
+    if(btn){btn.textContent=origText;btn.disabled=false;}
+  };
+  img.src=url;
+}
+
 function setView(v){
   document.querySelectorAll('.view').forEach(function(e){e.classList.remove('active');});
   document.querySelectorAll('.nav-btn').forEach(function(e){e.classList.remove('active');});
@@ -1847,6 +2006,8 @@ function setView(v){
   if(v==='shortlist')renderShortlist();
 }
 
+loadShortlist();
+tryRestoreSession();
 loadData();
 </script>
 <!-- Auth Modal -->
